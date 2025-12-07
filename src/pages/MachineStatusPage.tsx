@@ -1,14 +1,16 @@
 // src/pages/MachineStatusPage.tsx
-import { useEffect } from 'react';
-import GroupFilter from '../components/GroupFilter';
 import MachineStatusTable from '../components/MachineStatusTable';
 
 const MachineStatusPage = () => {
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="container mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Machine Monitoring</h1>
-        <GroupFilter />
+    <div className="h-full bg-gray-100 dark:bg-gray-900 p-4 transition-colors flex flex-col">
+      {/* Green Header Bar */}
+      <div className="bg-green-600 dark:bg-green-700 text-white px-4 py-2 mb-4 rounded">
+        <h1 className="text-xl font-semibold">Machine Monitoring</h1>
+      </div>
+
+      {/* Machine Status Tables */}
+      <div className="flex-1 overflow-auto">
         <MachineStatusTable />
       </div>
     </div>

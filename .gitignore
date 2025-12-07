@@ -1,1 +1,36 @@
-node_modules
+# Node modules
+/node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
+
+# Environment files
+.env
+.env.*.local
+
+# Build output
+/dist/
+/build/
+/out/
+/.next/
+/public/build/
+/coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors/IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Optional npm cache
+.npm
+.vercel

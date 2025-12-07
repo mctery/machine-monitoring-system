@@ -1,4 +1,4 @@
-// src/types/index.ts
+// src/types/index.ts - Consolidated type definitions
 
 export type MachineState = 'STOP' | 'RUN' | 'IDLE';
 
@@ -38,4 +38,25 @@ export interface TimelineData {
 export interface DateRange {
   from: Date;
   to: Date;
+}
+
+export interface MachineSetup {
+  group: string;
+  machineName: string;
+  weeklyTargetRatio: number;
+  monthlyTargetRatio: number;
+}
+
+export interface ExportData {
+  start: string;
+  end: string;
+  machine: string;
+  runHours: number;
+  warningHours: number;
+  stopHours: number;
+  actualRatio1: number;
+  actualRatio2: number;
+  trueRatio1: number;
+  trueRatio2: number;
+  warningRatio: number;
 }
