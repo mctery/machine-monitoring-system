@@ -8,8 +8,8 @@ const Header = () => {
   const { theme, toggleTheme } = useThemeStore();
 
   const navItems = [
-    { path: '/', label: 'Time Line' },
-    { path: '/status', label: 'Machine Status' },
+    { path: '/', label: 'Timeline Viewer' },
+    { path: '/status', label: 'Machine Monitoring' },
     { path: '/setup', label: 'Setup' },
     { path: '/contact', label: 'Contact' }
   ];
