@@ -78,8 +78,8 @@ async function getMachineHours(req: VercelRequest, res: VercelResponse, connecti
     params.push(String(to));
   }
 
-  sql += ' ORDER BY log_time DESC LIMIT ?';
-  params.push(Math.min(Number(limit), 1000));
+  const limitNum = Math.min(Number(limit), 1000);
+  sql += ` ORDER BY log_time DESC LIMIT ${limitNum}`;
 
   const [rows] = await connection.execute(sql, params);
 
