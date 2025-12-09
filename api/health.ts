@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getConnection } from './db';
+import db from './db';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,10 +8,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  let connection;
   try {
-    connection = await getConnection();
-    await connection.execute('SELECT 1');
+    await db.query('SELECT 1');
 
     return res.status(200).json({
       status: 'healthy',
@@ -26,8 +24,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       timestamp: new Date().toISOString()
     });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    await db.end();
   }
 }
