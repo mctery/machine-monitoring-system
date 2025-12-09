@@ -1,7 +1,6 @@
 // src/store/useMachineStore.ts
 import { create } from 'zustand';
 import { Machine, TimelineData, DateRange } from '../types';
-import { mockMachines, mockTimelineData } from '../data/mockData';
 import { machineHoursApi, MachineHoursData } from '../lib/api';
 
 // Helper to determine group from machine name
@@ -174,9 +173,11 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
       const machines = Array.from(latestByMachine.values()).map(mapToMachine);
       set({ machines, isLoading: false });
     } catch (error) {
-      // Fallback to mock data in development when API is not available
-      console.warn('API not available, using mock data:', error);
-      set({ machines: mockMachines, isLoading: false });
+      console.error('Failed to load machines:', error);
+      set({
+        error: error instanceof Error ? error.message : 'Failed to load machines from database',
+        isLoading: false
+      });
     }
   },
 
@@ -201,9 +202,11 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
       const timelineData = Array.from(latestByMachine.values()).map(d => mapToTimelineData(d, dateRange));
       set({ timelineData, isLoading: false });
     } catch (error) {
-      // Fallback to mock data in development when API is not available
-      console.warn('API not available, using mock data:', error);
-      set({ timelineData: mockTimelineData, isLoading: false });
+      console.error('Failed to load timeline data:', error);
+      set({
+        error: error instanceof Error ? error.message : 'Failed to load timeline data from database',
+        isLoading: false
+      });
     }
   },
 
