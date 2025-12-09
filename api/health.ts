@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from './prisma';
+import { getConnection } from './db';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,9 +8,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  let connection;
   try {
-    // Test database connection with Prisma
-    await prisma.$queryRaw`SELECT 1`;
+    connection = await getConnection();
+    await connection.execute('SELECT 1');
 
     return res.status(200).json({
       status: 'healthy',
@@ -24,5 +25,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
   }
 }
