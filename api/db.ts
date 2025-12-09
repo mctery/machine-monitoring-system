@@ -8,10 +8,7 @@ export async function getConnection() {
     user: process.env.DB_USER || 'REDACTED_USER',
     password: process.env.DB_PASSWORD || 'uOA3PJz4MTMvMkcW',
     database: process.env.DB_NAME || 'test',
-    ssl: {
-      minVersion: 'TLSv1.2',
-      rejectUnauthorized: true
-    }
+    ssl: {}
   });
   return connection;
 }
