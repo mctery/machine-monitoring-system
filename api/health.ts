@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import mysql from 'mysql2/promise';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -7,11 +8,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  let connection;
   try {
-    // Dynamic import to catch module errors
-    const { default: db } = await import('./db');
-    await db.query('SELECT 1');
-    await db.end();
+    connection = await mysql.createConnection({
+      host: process.env.DB_HOST || 'REDACTED_HOST',
+      port: parseInt(process.env.DB_PORT || '4000'),
+      user: process.env.DB_USER || 'REDACTED_USER',
+      password: process.env.DB_PASSWORD || 'uOA3PJz4MTMvMkcW',
+      database: process.env.DB_NAME || 'test',
+      ssl: {}
+    });
+
+    await connection.execute('SELECT 1');
 
     return res.status(200).json({
       status: 'healthy',
@@ -23,8 +31,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: 'unhealthy',
       database: 'error',
       error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString()
     });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
   }
 }

@@ -25,7 +25,8 @@
       "Bash(ls:*)",
       "Bash(DATABASE_URL=\"mysql://REDACTED_USER:uOA3PJz4MTMvMkcW@REDACTED_HOST:4000/test?sslaccept=strict\" npx prisma db push:*)",
       "Bash(DATABASE_URL=\"mysql://REDACTED_USER:uOA3PJz4MTMvMkcW@REDACTED_HOST:4000/test?sslaccept=strict\" npm run db:seed:*)",
-      "Bash(vercel --prod)"
+      "Bash(vercel --prod)",
+      "Bash(printf:*)"
     ],
     "deny": [],
     "ask": []
