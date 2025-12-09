@@ -14,7 +14,12 @@
       "Bash(npm run db:seed:*)",
       "Bash(npm run db:push:*)",
       "Bash(npx tsx:*)",
-      "Bash(npx vercel dev:*)"
+      "Bash(npx vercel dev:*)",
+      "Bash(cat:*)",
+      "Bash(vercel env add:*)",
+      "Bash(vercel logs:*)",
+      "Bash(git restore:*)",
+      "Bash(vercel env:*)"
     ],
     "deny": [],
     "ask": []
