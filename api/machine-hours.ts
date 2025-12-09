@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getConnection } from './db';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import db from './db';
 
-interface MachineHoursRow extends RowDataPacket {
+interface MachineHoursRow {
   id: number;
   log_time: Date;
   machine_name: string;
@@ -22,15 +21,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  let connection;
   try {
-    connection = await getConnection();
-
     switch (req.method) {
       case 'GET':
-        return await getMachineHours(req, res, connection);
+        return await getMachineHours(req, res);
       case 'POST':
-        return await createMachineHours(req, res, connection);
+        return await createMachineHours(req, res);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -41,18 +37,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    await db.end();
   }
 }
 
 // GET - Fetch machine hours data
-async function getMachineHours(req: VercelRequest, res: VercelResponse, connection: Awaited<ReturnType<typeof getConnection>>) {
+async function getMachineHours(req: VercelRequest, res: VercelResponse) {
   const { machine, from, to, limit = '100' } = req.query;
 
   let sql = 'SELECT * FROM machine_hours WHERE 1=1';
-  const params: (string | Date | number)[] = [];
+  const params: (string | number)[] = [];
 
   if (machine) {
     sql += ' AND machine_name = ?';
@@ -61,21 +55,21 @@ async function getMachineHours(req: VercelRequest, res: VercelResponse, connecti
 
   if (from) {
     sql += ' AND log_time >= ?';
-    params.push(new Date(String(from)));
+    params.push(String(from));
   }
 
   if (to) {
     sql += ' AND log_time <= ?';
-    params.push(new Date(String(to)));
+    params.push(String(to));
   }
 
   sql += ' ORDER BY log_time DESC LIMIT ?';
   params.push(Math.min(Number(limit), 1000));
 
-  const [rows] = await connection.execute<MachineHoursRow[]>(sql, params);
+  const rows = await db.query<MachineHoursRow[]>(sql, params);
 
   // Map to camelCase for frontend
-  const data = rows.map(row => ({
+  const data = rows.map((row: MachineHoursRow) => ({
     id: row.id,
     logTime: row.log_time,
     machineName: row.machine_name,
@@ -90,7 +84,7 @@ async function getMachineHours(req: VercelRequest, res: VercelResponse, connecti
 }
 
 // POST - Create machine hours entry
-async function createMachineHours(req: VercelRequest, res: VercelResponse, connection: Awaited<ReturnType<typeof getConnection>>) {
+async function createMachineHours(req: VercelRequest, res: VercelResponse) {
   const { logTime, machineName, runHour, stopHour, runStatus, stopStatus, reworkStatus } = req.body;
 
   if (!logTime || !machineName || runHour === undefined || stopHour === undefined) {
@@ -104,8 +98,8 @@ async function createMachineHours(req: VercelRequest, res: VercelResponse, conne
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
-  const [result] = await connection.execute<ResultSetHeader>(sql, [
-    new Date(logTime),
+  const result = await db.query(sql, [
+    logTime,
     machineName,
     Number(runHour),
     Number(stopHour),
@@ -116,6 +110,6 @@ async function createMachineHours(req: VercelRequest, res: VercelResponse, conne
 
   return res.status(201).json({
     message: 'Created',
-    data: { id: result.insertId, logTime, machineName, runHour, stopHour, runStatus, stopStatus, reworkStatus }
+    data: { id: (result as { insertId: number }).insertId, logTime, machineName, runHour, stopHour, runStatus, stopStatus, reworkStatus }
   });
 }
