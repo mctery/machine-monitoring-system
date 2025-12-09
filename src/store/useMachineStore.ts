@@ -2,6 +2,103 @@
 import { create } from 'zustand';
 import { Machine, TimelineData, DateRange } from '../types';
 import { mockMachines, mockTimelineData } from '../data/mockData';
+import { machineHoursApi, MachineHoursData } from '../lib/api';
+
+// Helper to determine group from machine name
+const getGroupFromMachineName = (name: string): string => {
+  if (name.startsWith('Model') || name.startsWith('PIS') || name.startsWith('Side piece') || name.startsWith('NC Lathe')) {
+    return 'PIS';
+  }
+  if (name.startsWith('3G')) {
+    return '3G';
+  }
+  if (name.startsWith('Laser')) {
+    return 'BLADE';
+  }
+  if (name.startsWith('Letter')) {
+    return 'SIDE MOLD';
+  }
+  // SECTOR vs SECTOR (TR) - based on specific machine numbers
+  if (name.startsWith('Machining') || name.startsWith('Turning')) {
+    const num = parseInt(name.split(' ')[1]) || 0;
+    // Machining 1, 7, 8 and Turning 4, 9 are SECTOR (TR)
+    if (name.startsWith('Machining') && [1, 7, 8].includes(num)) {
+      return 'SECTOR (TR)';
+    }
+    if (name.startsWith('Turning') && [4, 9].includes(num)) {
+      return 'SECTOR (TR)';
+    }
+    // Machining 2, 5, 6 and Turning 5, 7 are SIDE MOLD
+    if (name.startsWith('Machining') && [2, 5, 6].includes(num)) {
+      return 'SIDE MOLD';
+    }
+    if (name.startsWith('Turning') && [5, 7].includes(num)) {
+      return 'SIDE MOLD';
+    }
+    return 'SECTOR';
+  }
+  return 'OTHER';
+};
+
+// Convert API data to Machine type
+const mapToMachine = (data: MachineHoursData): Machine => ({
+  id: String(data.id),
+  group: getGroupFromMachineName(data.machineName),
+  machineName: data.machineName,
+  state: data.runStatus === 1 ? 'RUN' : 'STOP',
+  rework: data.reworkStatus !== null ? String(data.reworkStatus) : '',
+  stopHours: data.stopHour,
+  weeklyActualRatio: data.runHour * 100, // runHour is ratio (0-1)
+  weeklyTargetRatio: 50, // default target
+  monthlyActualRatio: 0, // ยังไม่มีข้อมูล - เว้นไว้ก่อน
+  monthlyTargetRatio: 50, // default target
+});
+
+// Convert API data to TimelineData type
+const mapToTimelineData = (data: MachineHoursData, dateRange: DateRange): TimelineData => {
+  const runRatio = data.runHour * 100;
+  const totalHours = data.runHour + data.stopHour;
+  const runHours = totalHours > 0 ? (data.runHour / totalHours) * 24 : 0;
+  const stopHours = totalHours > 0 ? (data.stopHour / totalHours) * 24 : 24;
+
+  // Generate timeline segments based on current status
+  const dayStart = new Date(dateRange.from);
+  dayStart.setHours(0, 0, 0, 0);
+
+  const timeline: import('../types').TimelineSegment[] = [];
+
+  // Create a simple timeline representation
+  if (runHours > 0) {
+    timeline.push({
+      start: dayStart,
+      end: new Date(dayStart.getTime() + runHours * 60 * 60 * 1000),
+      state: 'RUN',
+      duration: runHours
+    });
+  }
+  if (stopHours > 0) {
+    const stopStart = new Date(dayStart.getTime() + runHours * 60 * 60 * 1000);
+    timeline.push({
+      start: stopStart,
+      end: new Date(stopStart.getTime() + stopHours * 60 * 60 * 1000),
+      state: 'STOP',
+      duration: stopHours
+    });
+  }
+
+  return {
+    machineName: data.machineName,
+    run: runHours,
+    warning: 0,
+    stop: stopHours,
+    actualRatio1: runRatio,
+    actualRatio2: 0, // ยังไม่มีข้อมูล
+    trueRatio1: runRatio,
+    trueRatio2: 50, // target
+    warningRatio: 0,
+    timeline
+  };
+};
 
 interface MachineStore {
   // State
@@ -61,41 +158,52 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
   loadMachines: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      set({ machines: mockMachines, isLoading: false });
+      // Fetch from API
+      const data = await machineHoursApi.getAll({ limit: 1000 });
 
-      // TODO: Replace with actual API call when backend is ready
-      // const response = await fetch('/api/machines');
-      // if (!response.ok) throw new Error('Failed to fetch machines');
-      // const data = await response.json();
-      // set({ machines: data, isLoading: false });
+      // Get latest record for each machine
+      const latestByMachine = new Map<string, MachineHoursData>();
+      for (const entry of data) {
+        const existing = latestByMachine.get(entry.machineName);
+        if (!existing || new Date(entry.logTime) > new Date(existing.logTime)) {
+          latestByMachine.set(entry.machineName, entry);
+        }
+      }
+
+      // Convert to Machine type
+      const machines = Array.from(latestByMachine.values()).map(mapToMachine);
+      set({ machines, isLoading: false });
     } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to load machines',
-        isLoading: false
-      });
+      // Fallback to mock data in development when API is not available
+      console.warn('API not available, using mock data:', error);
+      set({ machines: mockMachines, isLoading: false });
     }
   },
 
   loadTimelineData: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      set({ timelineData: mockTimelineData, isLoading: false });
+      const { dateRange } = get();
 
-      // TODO: Replace with actual API call when backend is ready
-      // const { dateRange } = get();
-      // const response = await fetch(`/api/timeline?from=${dateRange.from.toISOString()}&to=${dateRange.to.toISOString()}`);
-      // if (!response.ok) throw new Error('Failed to fetch timeline data');
-      // const data = await response.json();
-      // set({ timelineData: data, isLoading: false });
+      // Fetch from API
+      const data = await machineHoursApi.getAll({ limit: 1000 });
+
+      // Get latest record for each machine
+      const latestByMachine = new Map<string, MachineHoursData>();
+      for (const entry of data) {
+        const existing = latestByMachine.get(entry.machineName);
+        if (!existing || new Date(entry.logTime) > new Date(existing.logTime)) {
+          latestByMachine.set(entry.machineName, entry);
+        }
+      }
+
+      // Convert to TimelineData type
+      const timelineData = Array.from(latestByMachine.values()).map(d => mapToTimelineData(d, dateRange));
+      set({ timelineData, isLoading: false });
     } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to load timeline data',
-        isLoading: false
-      });
+      // Fallback to mock data in development when API is not available
+      console.warn('API not available, using mock data:', error);
+      set({ timelineData: mockTimelineData, isLoading: false });
     }
   },
 

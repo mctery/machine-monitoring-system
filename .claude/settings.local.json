@@ -8,7 +8,13 @@
       "Bash(git reset:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git -C /Users/thanawat/Dev/mqtt-mornitoring-system log --oneline -10)",
+      "Bash(npx prisma:*)",
+      "Bash(npm run db:seed:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npx vercel dev:*)"
     ],
     "deny": [],
     "ask": []

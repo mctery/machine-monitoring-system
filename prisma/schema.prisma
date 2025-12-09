@@ -1,0 +1,24 @@
+// Prisma schema for PLC Log - Machine Hours
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model MachineHours {
+  id           Int       @id @default(autoincrement())
+  logTime      DateTime  @map("log_time")
+  machineName  String    @map("machine_name") @db.VarChar(50)
+  runHour      Float     @map("run_hour")
+  stopHour     Float     @map("stop_hour")
+  runStatus    Int       @map("run_status") @db.TinyInt
+  stopStatus   Int       @map("stop_status") @db.TinyInt
+  reworkStatus Int?      @map("rework_status")
+
+  @@map("machine_hours")
+}

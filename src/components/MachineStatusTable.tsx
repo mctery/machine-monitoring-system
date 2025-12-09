@@ -139,11 +139,11 @@ const MachineStatusTable = () => {
   }
 
   return (
-    <div className="w-full">
-      {/* Two-column grid layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+    <div className="h-full flex flex-col">
+      {/* Two-column grid layout - scrollable */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Left Table - PIS, 3G */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg overflow-auto shadow">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-auto">
           <DataTable
             data={leftMachines}
             columns={machineColumns}
@@ -153,7 +153,7 @@ const MachineStatusTable = () => {
         </div>
 
         {/* Right Table - SECTOR, SIDE MOLD, BLADE */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg overflow-auto shadow">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-auto">
           <DataTable
             data={rightMachines}
             columns={machineColumns}
@@ -163,14 +163,10 @@ const MachineStatusTable = () => {
         </div>
       </div>
 
-      {/* Last Updated Time */}
-      <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-        LAST UPDATED TIME : {lastUpdated}
-      </div>
-
-      {/* Footer */}
-      <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-        Copyright &copy; 2023 Tire Mold (Thailand) Co., Ltd. (Bridgestone Group)
+      {/* Footer - Fixed at bottom */}
+      <div className="flex-shrink-0 pt-3 pb-1 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
+        <span>LAST UPDATED TIME : {lastUpdated}</span>
+        <span>Copyright &copy; 2023 Tire Mold (Thailand) Co., Ltd. (Bridgestone Group)</span>
       </div>
     </div>
   );
