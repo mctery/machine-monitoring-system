@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import pool from './db';
+import { getConnection } from './db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 interface MachineHoursRow extends RowDataPacket {
@@ -22,12 +22,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
+  let connection;
   try {
+    connection = await getConnection();
+
     switch (req.method) {
       case 'GET':
-        return await getMachineHours(req, res);
+        return await getMachineHours(req, res, connection);
       case 'POST':
-        return await createMachineHours(req, res);
+        return await createMachineHours(req, res, connection);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -37,11 +40,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
   }
 }
 
 // GET - Fetch machine hours data
-async function getMachineHours(req: VercelRequest, res: VercelResponse) {
+async function getMachineHours(req: VercelRequest, res: VercelResponse, connection: Awaited<ReturnType<typeof getConnection>>) {
   const { machine, from, to, limit = '100' } = req.query;
 
   let sql = 'SELECT * FROM machine_hours WHERE 1=1';
@@ -65,7 +72,7 @@ async function getMachineHours(req: VercelRequest, res: VercelResponse) {
   sql += ' ORDER BY log_time DESC LIMIT ?';
   params.push(Math.min(Number(limit), 1000));
 
-  const [rows] = await pool.execute<MachineHoursRow[]>(sql, params);
+  const [rows] = await connection.execute<MachineHoursRow[]>(sql, params);
 
   // Map to camelCase for frontend
   const data = rows.map(row => ({
@@ -83,7 +90,7 @@ async function getMachineHours(req: VercelRequest, res: VercelResponse) {
 }
 
 // POST - Create machine hours entry
-async function createMachineHours(req: VercelRequest, res: VercelResponse) {
+async function createMachineHours(req: VercelRequest, res: VercelResponse, connection: Awaited<ReturnType<typeof getConnection>>) {
   const { logTime, machineName, runHour, stopHour, runStatus, stopStatus, reworkStatus } = req.body;
 
   if (!logTime || !machineName || runHour === undefined || stopHour === undefined) {
@@ -97,7 +104,7 @@ async function createMachineHours(req: VercelRequest, res: VercelResponse) {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
-  const [result] = await pool.execute<ResultSetHeader>(sql, [
+  const [result] = await connection.execute<ResultSetHeader>(sql, [
     new Date(logTime),
     machineName,
     Number(runHour),
