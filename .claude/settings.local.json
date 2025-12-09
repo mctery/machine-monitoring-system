@@ -26,7 +26,9 @@
       "Bash(DATABASE_URL=\"mysql://REDACTED_USER:uOA3PJz4MTMvMkcW@REDACTED_HOST:4000/test?sslaccept=strict\" npx prisma db push:*)",
       "Bash(DATABASE_URL=\"mysql://REDACTED_USER:uOA3PJz4MTMvMkcW@REDACTED_HOST:4000/test?sslaccept=strict\" npm run db:seed:*)",
       "Bash(vercel --prod)",
-      "Bash(printf:*)"
+      "Bash(printf:*)",
+      "Bash(DATABASE_URL=\"mysql://REDACTED_USER:REDACTED_PASSWORD@REDACTED_HOST:4000/test?sslaccept=strict\" npx prisma db push:*)",
+      "Bash(DATABASE_URL=\"mysql://REDACTED_USER:REDACTED_PASSWORD@REDACTED_HOST:4000/test?sslaccept=strict\" npm run db:seed:*)"
     ],
     "deny": [],
     "ask": []
