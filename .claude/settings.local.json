@@ -26,7 +26,9 @@
       "Bash(DATABASE_URL=\"mysql://36z4FEVBxiY23rD.root:uOA3PJz4MTMvMkcW@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?sslaccept=strict\" npx prisma db push:*)",
       "Bash(DATABASE_URL=\"mysql://36z4FEVBxiY23rD.root:uOA3PJz4MTMvMkcW@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?sslaccept=strict\" npm run db:seed:*)",
       "Bash(vercel --prod)",
-      "Bash(printf:*)"
+      "Bash(printf:*)",
+      "Bash(DATABASE_URL=\"mysql://36z4FEVBxiY23rD.root:cLzLY9myzgEmww03@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?sslaccept=strict\" npx prisma db push:*)",
+      "Bash(DATABASE_URL=\"mysql://36z4FEVBxiY23rD.root:cLzLY9myzgEmww03@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?sslaccept=strict\" npm run db:seed:*)"
     ],
     "deny": [],
     "ask": []
