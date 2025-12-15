@@ -7,6 +7,12 @@ export default defineConfig({
   server: {
     port: 5000,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000', // Vercel dev server or your API server
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: 'dist',
