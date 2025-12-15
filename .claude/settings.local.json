@@ -1,36 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run build:*)",
-      "Bash(git rm:*)",
-      "Bash(npm install:*)",
-      "Bash(npm uninstall:*)",
-      "Bash(git reset:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(git -C /Users/thanawat/Dev/mqtt-mornitoring-system log --oneline -10)",
-      "Bash(npx prisma:*)",
-      "Bash(npm run db:seed:*)",
-      "Bash(npm run db:push:*)",
-      "Bash(npx tsx:*)",
-      "Bash(npx vercel dev:*)",
-      "Bash(cat:*)",
-      "Bash(vercel env add:*)",
-      "Bash(vercel logs:*)",
-      "Bash(git restore:*)",
-      "Bash(vercel env:*)",
-      "Bash(vercel inspect:*)",
-      "Bash(curl:*)",
-      "Bash(ls:*)",
-      "Bash(DATABASE_URL=\"mysql://REDACTED_USER:uOA3PJz4MTMvMkcW@REDACTED_HOST:4000/test?sslaccept=strict\" npx prisma db push:*)",
-      "Bash(DATABASE_URL=\"mysql://REDACTED_USER:uOA3PJz4MTMvMkcW@REDACTED_HOST:4000/test?sslaccept=strict\" npm run db:seed:*)",
-      "Bash(vercel --prod)",
-      "Bash(printf:*)",
-      "Bash(DATABASE_URL=\"mysql://REDACTED_USER:REDACTED_PASSWORD@REDACTED_HOST:4000/test?sslaccept=strict\" npx prisma db push:*)",
-      "Bash(DATABASE_URL=\"mysql://REDACTED_USER:REDACTED_PASSWORD@REDACTED_HOST:4000/test?sslaccept=strict\" npm run db:seed:*)"
-    ],
-    "deny": [],
-    "ask": []
+      "Bash(*)",
+      "Edit(*)",
+      "Write(*)"
+    ]
   }
 }
