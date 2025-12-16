@@ -98,6 +98,7 @@ export const mockMachines: Machine[] = [
 
 export const mockTimelineData: TimelineData[] = mockMachines.slice(0, 12).map(machine => ({
   machineName: machine.machineName,
+  groupName: machine.group,
   run: Math.random() * 10 + 2,
   warning: Math.floor(Math.random() * 3),
   stop: Math.random() * 8 + 1,

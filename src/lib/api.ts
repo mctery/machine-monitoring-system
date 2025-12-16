@@ -28,6 +28,46 @@ interface HealthStatus {
   error?: string;
 }
 
+// Machine settings data from database
+export interface MachineSettingsData {
+  id: number;
+  machineName: string;
+  groupName: string;
+  weeklyTarget: number;
+  monthlyTarget: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Machine status data (joined from machine_settings + machine_hours)
+export interface MachineStatusData {
+  id: number;
+  machineName: string;
+  groupName: string;
+  weeklyTarget: number;
+  monthlyTarget: number;
+  runHour: number | null;
+  stopHour: number | null;
+  runStatus: number | null;
+  stopStatus: number | null;
+  reworkStatus: number | null;
+  logTime: string | null;
+  weeklyActualRatio: number;
+  monthlyActualRatio: number;
+}
+
+// Timeline data from API (for timeline viewer)
+export interface TimelineApiData {
+  machineName: string;
+  groupName: string;
+  weeklyTarget: number;
+  monthlyTarget: number;
+  runHour: number;
+  stopHour: number;
+  actualRatio1: number;
+  trueRatio1: number;
+}
+
 // Generic fetch wrapper with error handling
 async function fetchApi<T>(
   endpoint: string,
@@ -110,6 +150,87 @@ export const machineHoursApi = {
       body: JSON.stringify(entry),
     });
     return response.data!;
+  },
+};
+
+// Machine Settings API
+export const machineSettingsApi = {
+  // Get all machine settings
+  async getAll(group?: string): Promise<MachineSettingsData[]> {
+    const query = group && group !== 'All' ? `?group=${encodeURIComponent(group)}` : '';
+    const response = await fetchApi<MachineSettingsData[]>(`/machine-settings${query}`);
+    return response.data || [];
+  },
+
+  // Get unique groups
+  async getGroups(): Promise<string[]> {
+    const data = await this.getAll();
+    const groups = [...new Set(data.map(d => d.groupName))];
+    return ['All', ...groups.sort()];
+  },
+
+  // Create new setting
+  async create(setting: Omit<MachineSettingsData, 'id' | 'createdAt' | 'updatedAt'>): Promise<MachineSettingsData> {
+    const response = await fetchApi<MachineSettingsData>('/machine-settings', {
+      method: 'POST',
+      body: JSON.stringify(setting),
+    });
+    return response.data!;
+  },
+
+  // Update setting
+  async update(id: number, setting: Partial<Omit<MachineSettingsData, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> {
+    await fetchApi(`/machine-settings?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(setting),
+    });
+  },
+
+  // Delete setting
+  async delete(id: number): Promise<void> {
+    await fetchApi(`/machine-settings?id=${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Initialize table and seed data
+  async initialize(): Promise<{ message: string; insertedCount?: number }> {
+    const response = await fetchApi<{ message: string; insertedCount?: number }>('/init-settings', {
+      method: 'POST',
+    });
+    return response as { message: string; insertedCount?: number };
+  },
+};
+
+// Machine Status API (joined data for monitoring page)
+export const machineStatusApi = {
+  // Get all machine status with settings and latest hours
+  async getAll(): Promise<{ data: MachineStatusData[]; groups: string[] }> {
+    const response = await fetchApi<MachineStatusData[]>('/machine-status');
+    return {
+      data: response.data || [],
+      groups: (response as unknown as { groups: string[] }).groups || []
+    };
+  },
+};
+
+// Timeline API (for timeline viewer with date range filter)
+export const timelineApi = {
+  // Get timeline data with date range filter
+  async getByDateRange(from: Date, to: Date): Promise<TimelineApiData[]> {
+    const fromStr = from.toISOString();
+    const toStr = to.toISOString();
+    const response = await fetchApi<TimelineApiData[]>(`/timeline-data?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`);
+    return response.data || [];
+  },
+};
+
+// Seed API (for generating test data)
+export const seedApi = {
+  // Generate random machine_hours data
+  async seedHours(): Promise<{ message: string; insertedCount: number }> {
+    const response = await fetchApi<{ message: string; insertedCount: number }>('/seed-hours');
+    return response as { message: string; insertedCount: number };
   },
 };
 

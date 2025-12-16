@@ -81,6 +81,17 @@ const TimelineRow = memo(({ item }: { item: TimelineData }) => {
 
 TimelineRow.displayName = 'TimelineRow';
 
+// Group header row component
+const GroupHeaderRow = memo(({ groupName, colSpan }: { groupName: string; colSpan: number }) => (
+  <tr className="bg-gray-300 dark:bg-gray-600">
+    <td colSpan={colSpan} className="px-4 py-2 font-bold text-gray-800 dark:text-white">
+      {groupName}
+    </td>
+  </tr>
+));
+
+GroupHeaderRow.displayName = 'GroupHeaderRow';
+
 const TimelineViewer = () => {
   const { timelineData, dateRange, setDateRange, loadTimelineData, exportToCSV, isLoading, error, clearError } = useMachineStore();
   const [fromDate, setFromDate] = useState(format(dateRange.from, "yyyy-MM-dd'T'HH:mm"));
@@ -90,6 +101,20 @@ const TimelineViewer = () => {
   useEffect(() => {
     loadTimelineData();
   }, [loadTimelineData]);
+
+  // Group timeline data by groupName
+  const groupedData = useMemo(() => {
+    const groups = new Map<string, TimelineData[]>();
+    for (const item of timelineData) {
+      const group = item.groupName || 'Unknown';
+      if (!groups.has(group)) {
+        groups.set(group, []);
+      }
+      groups.get(group)!.push(item);
+    }
+    // Sort groups alphabetically
+    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [timelineData]);
 
   const handleUpdate = useCallback(() => {
     const from = new Date(fromDate);
@@ -222,8 +247,13 @@ const TimelineViewer = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800">
-                  {timelineData.map((item, index) => (
-                    <TimelineRow key={item.machineName || index} item={item} />
+                  {groupedData.map(([groupName, items]) => (
+                    <>
+                      <GroupHeaderRow key={`group-${groupName}`} groupName={groupName} colSpan={10} />
+                      {items.map((item, index) => (
+                        <TimelineRow key={`${groupName}-${item.machineName || index}`} item={item} />
+                      ))}
+                    </>
                   ))}
                 </tbody>
               </table>

@@ -90,22 +90,24 @@ const machineColumns: ColumnDef<Machine, unknown>[] = [
 ];
 
 const MachineStatusTable = () => {
-  const { machines, loadMachines, isLoading, error } = useMachineStore();
+  const { machines, availableGroups, loadMachines, isLoading, error } = useMachineStore();
 
   useEffect(() => {
     loadMachines();
   }, [loadMachines]);
 
-  // Split machines into left and right tables
+  // Split machines into left and right tables dynamically
   const { leftMachines, rightMachines } = useMemo(() => {
-    const leftGroups = ['PIS', '3G'];
-    const rightGroups = ['SECTOR', 'SECTOR (TR)', 'SIDE MOLD', 'BLADE'];
+    // Split groups: first half to left, second half to right
+    const midPoint = Math.ceil(availableGroups.length / 2);
+    const leftGroups = availableGroups.slice(0, midPoint);
+    const rightGroups = availableGroups.slice(midPoint);
 
     return {
       leftMachines: machines.filter(m => leftGroups.includes(m.group)),
       rightMachines: machines.filter(m => rightGroups.includes(m.group))
     };
-  }, [machines]);
+  }, [machines, availableGroups]);
 
   // Get current timestamp
   const lastUpdated = useMemo(() => {
@@ -142,7 +144,7 @@ const MachineStatusTable = () => {
     <div className="h-full flex flex-col">
       {/* Two-column grid layout - scrollable */}
       <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* Left Table - PIS, 3G */}
+        {/* Left Table */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-auto">
           <DataTable
             data={leftMachines}
@@ -152,7 +154,7 @@ const MachineStatusTable = () => {
           />
         </div>
 
-        {/* Right Table - SECTOR, SIDE MOLD, BLADE */}
+        {/* Right Table */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-auto">
           <DataTable
             data={rightMachines}

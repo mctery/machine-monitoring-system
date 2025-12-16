@@ -1,72 +1,41 @@
 // src/store/useMachineStore.ts
 import { create } from 'zustand';
 import { Machine, TimelineData, DateRange } from '../types';
-import { machineHoursApi, MachineHoursData } from '../lib/api';
+import { machineStatusApi, MachineStatusData, timelineApi, TimelineApiData } from '../lib/api';
 
-// Helper to determine group from machine name
-const getGroupFromMachineName = (name: string): string => {
-  if (name.startsWith('Model') || name.startsWith('PIS') || name.startsWith('Side piece') || name.startsWith('NC Lathe')) {
-    return 'PIS';
-  }
-  if (name.startsWith('3G')) {
-    return '3G';
-  }
-  if (name.startsWith('Laser')) {
-    return 'BLADE';
-  }
-  if (name.startsWith('Letter')) {
-    return 'SIDE MOLD';
-  }
-  // SECTOR vs SECTOR (TR) - based on specific machine numbers
-  if (name.startsWith('Machining') || name.startsWith('Turning')) {
-    const num = parseInt(name.split(' ')[1]) || 0;
-    // Machining 1, 7, 8 and Turning 4, 9 are SECTOR (TR)
-    if (name.startsWith('Machining') && [1, 7, 8].includes(num)) {
-      return 'SECTOR (TR)';
-    }
-    if (name.startsWith('Turning') && [4, 9].includes(num)) {
-      return 'SECTOR (TR)';
-    }
-    // Machining 2, 5, 6 and Turning 5, 7 are SIDE MOLD
-    if (name.startsWith('Machining') && [2, 5, 6].includes(num)) {
-      return 'SIDE MOLD';
-    }
-    if (name.startsWith('Turning') && [5, 7].includes(num)) {
-      return 'SIDE MOLD';
-    }
-    return 'SECTOR';
-  }
-  return 'OTHER';
-};
-
-// Convert API data to Machine type
-const mapToMachine = (data: MachineHoursData): Machine => ({
+// Convert joined data to Machine type
+const mapStatusToMachine = (data: MachineStatusData): Machine => ({
   id: String(data.id),
-  group: getGroupFromMachineName(data.machineName),
+  group: data.groupName,
   machineName: data.machineName,
   state: data.runStatus === 1 ? 'RUN' : 'STOP',
   rework: data.reworkStatus !== null ? String(data.reworkStatus) : '',
-  stopHours: data.stopHour,
-  weeklyActualRatio: data.runHour * 100, // runHour is ratio (0-1)
-  weeklyTargetRatio: 50, // default target
-  monthlyActualRatio: 0, // ยังไม่มีข้อมูล - เว้นไว้ก่อน
-  monthlyTargetRatio: 50, // default target
+  stopHours: data.stopHour ?? 0,
+  weeklyActualRatio: data.weeklyActualRatio ?? 0,
+  weeklyTargetRatio: data.weeklyTarget,
+  monthlyActualRatio: data.monthlyActualRatio ?? 0,
+  monthlyTargetRatio: data.monthlyTarget,
 });
 
-// Convert API data to TimelineData type
-const mapToTimelineData = (data: MachineHoursData, dateRange: DateRange): TimelineData => {
-  const runRatio = data.runHour * 100;
+// Convert API data to TimelineData type (with group averages calculated)
+const mapToTimelineData = (
+  data: TimelineApiData,
+  groupAverages: Map<string, { avgActualRatio1: number; avgTrueRatio1: number }>,
+  dateRange: DateRange
+): TimelineData => {
   const totalHours = data.runHour + data.stopHour;
   const runHours = totalHours > 0 ? (data.runHour / totalHours) * 24 : 0;
   const stopHours = totalHours > 0 ? (data.stopHour / totalHours) * 24 : 24;
 
-  // Generate timeline segments based on current status
+  // Get group averages
+  const groupAvg = groupAverages.get(data.groupName) || { avgActualRatio1: 0, avgTrueRatio1: 0 };
+
+  // Generate timeline segments
   const dayStart = new Date(dateRange.from);
   dayStart.setHours(0, 0, 0, 0);
 
   const timeline: import('../types').TimelineSegment[] = [];
 
-  // Create a simple timeline representation
   if (runHours > 0) {
     timeline.push({
       start: dayStart,
@@ -85,16 +54,20 @@ const mapToTimelineData = (data: MachineHoursData, dateRange: DateRange): Timeli
     });
   }
 
+  // WARNING RATIO = Actual Ratio2 - True Ratio2
+  const warningRatio = Number((groupAvg.avgActualRatio1 - groupAvg.avgTrueRatio1).toFixed(2));
+
   return {
     machineName: data.machineName,
+    groupName: data.groupName,
     run: runHours,
-    warning: 0,
+    warning: 0, // No warning data in database yet
     stop: stopHours,
-    actualRatio1: runRatio,
-    actualRatio2: 0, // ยังไม่มีข้อมูล
-    trueRatio1: runRatio,
-    trueRatio2: 50, // target
-    warningRatio: 0,
+    actualRatio1: data.actualRatio1,
+    actualRatio2: groupAvg.avgActualRatio1, // Group average of actualRatio1
+    trueRatio1: data.trueRatio1, // = ((Run-Warning)/(Run+Stop))*100, but Warning=0 so same as actualRatio1
+    trueRatio2: groupAvg.avgTrueRatio1, // Group average of trueRatio1
+    warningRatio: warningRatio,
     timeline
   };
 };
@@ -103,6 +76,7 @@ interface MachineStore {
   // State
   machines: Machine[];
   timelineData: TimelineData[];
+  availableGroups: string[];
   selectedGroup: string;
   dateRange: DateRange;
   isLoading: boolean;
@@ -135,6 +109,7 @@ const escapeCSVValue = (value: string | number): string => {
 export const useMachineStore = create<MachineStore>((set, get) => ({
   machines: [],
   timelineData: [],
+  availableGroups: [],
   selectedGroup: 'ALL',
   dateRange: {
     from: new Date(new Date().setHours(0, 0, 0, 0)),
@@ -157,21 +132,12 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
   loadMachines: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Fetch from API
-      const data = await machineHoursApi.getAll({ limit: 1000 });
-
-      // Get latest record for each machine
-      const latestByMachine = new Map<string, MachineHoursData>();
-      for (const entry of data) {
-        const existing = latestByMachine.get(entry.machineName);
-        if (!existing || new Date(entry.logTime) > new Date(existing.logTime)) {
-          latestByMachine.set(entry.machineName, entry);
-        }
-      }
+      // Fetch joined data from API
+      const { data, groups } = await machineStatusApi.getAll();
 
       // Convert to Machine type
-      const machines = Array.from(latestByMachine.values()).map(mapToMachine);
-      set({ machines, isLoading: false });
+      const machines = data.map(mapStatusToMachine);
+      set({ machines, availableGroups: groups, isLoading: false });
     } catch (error) {
       console.error('Failed to load machines:', error);
       set({
@@ -186,20 +152,31 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
     try {
       const { dateRange } = get();
 
-      // Fetch from API
-      const data = await machineHoursApi.getAll({ limit: 1000 });
+      // Fetch from new timeline API with date range filter
+      const data = await timelineApi.getByDateRange(dateRange.from, dateRange.to);
 
-      // Get latest record for each machine
-      const latestByMachine = new Map<string, MachineHoursData>();
+      // Calculate group averages for actualRatio2 and trueRatio2
+      const groupStats = new Map<string, { sumActual: number; sumTrue: number; count: number }>();
       for (const entry of data) {
-        const existing = latestByMachine.get(entry.machineName);
-        if (!existing || new Date(entry.logTime) > new Date(existing.logTime)) {
-          latestByMachine.set(entry.machineName, entry);
-        }
+        const existing = groupStats.get(entry.groupName) || { sumActual: 0, sumTrue: 0, count: 0 };
+        groupStats.set(entry.groupName, {
+          sumActual: existing.sumActual + entry.actualRatio1,
+          sumTrue: existing.sumTrue + entry.trueRatio1,
+          count: existing.count + 1
+        });
       }
 
-      // Convert to TimelineData type
-      const timelineData = Array.from(latestByMachine.values()).map(d => mapToTimelineData(d, dateRange));
+      // Convert to averages
+      const groupAverages = new Map<string, { avgActualRatio1: number; avgTrueRatio1: number }>();
+      for (const [group, stats] of groupStats) {
+        groupAverages.set(group, {
+          avgActualRatio1: stats.count > 0 ? Number((stats.sumActual / stats.count).toFixed(2)) : 0,
+          avgTrueRatio1: stats.count > 0 ? Number((stats.sumTrue / stats.count).toFixed(2)) : 0
+        });
+      }
+
+      // Convert to TimelineData type with group averages
+      const timelineData = data.map(d => mapToTimelineData(d, groupAverages, dateRange));
       set({ timelineData, isLoading: false });
     } catch (error) {
       console.error('Failed to load timeline data:', error);

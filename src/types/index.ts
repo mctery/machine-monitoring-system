@@ -24,6 +24,7 @@ export interface TimelineSegment {
 
 export interface TimelineData {
   machineName: string;
+  groupName: string;
   run: number;
   warning: number;
   stop: number;

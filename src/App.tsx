@@ -9,7 +9,6 @@ import { Loader2 } from 'lucide-react';
 const TimelineViewer = lazy(() => import('./components/TimelineViewer'));
 const MachineStatusPage = lazy(() => import('./pages/MachineStatusPage'));
 const MachineSetup = lazy(() => import('./components/MachineSetup'));
-const ContactPage = lazy(() => import('./pages/ContactPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -30,7 +29,6 @@ function App() {
                 <Route path="/" element={<TimelineViewer />} />
                 <Route path="/status" element={<MachineStatusPage />} />
                 <Route path="/setup" element={<MachineSetup />} />
-                <Route path="/contact" element={<ContactPage />} />
               </Routes>
             </Suspense>
           </main>

@@ -3,7 +3,11 @@
     "allow": [
       "Bash(*)",
       "Edit(*)",
-      "Write(*)"
+      "Write(*)",
+      "Bash(git filter-repo:*)",
+      "Bash(git remote add:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
