@@ -12,13 +12,22 @@ interface MachineHoursRow {
   rework_status: number | null;
 }
 
+function validateEnvVars() {
+  const required = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+  const missing = required.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+}
+
 async function getConnection() {
+  validateEnvVars();
   return mysql.createConnection({
-    host: process.env.DB_HOST || 'REDACTED_HOST',
-    port: parseInt(process.env.DB_PORT || '4000'),
-    user: process.env.DB_USER || 'REDACTED_USER',
-    password: process.env.DB_PASSWORD || 'REDACTED_PASSWORD',
-    database: process.env.DB_NAME || 'test',
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT!),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
     ssl: {}
   });
 }
