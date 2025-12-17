@@ -10,7 +10,8 @@ const Header = () => {
   const navItems = [
     { path: '/', label: 'Timeline Viewer' },
     { path: '/status', label: 'Machine Monitoring' },
-    { path: '/setup', label: 'Setup' }
+    { path: '/setup', label: 'Setup' },
+    { path: '/simulation', label: 'Simulation' }
   ];
 
   return (

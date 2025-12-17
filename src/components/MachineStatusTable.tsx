@@ -92,9 +92,10 @@ const machineColumns: ColumnDef<Machine, unknown>[] = [
 ];
 
 const MachineStatusTable = () => {
-  const { machines, availableGroups, loadMachines, isLoading, error } = useMachineStore();
+  const { machines, availableGroups, loadMachines, error } = useMachineStore();
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Format timestamp
@@ -112,16 +113,17 @@ const MachineStatusTable = () => {
   }, []);
 
   // Fetch data and update timestamp
-  const fetchData = useCallback(async (showRefreshIndicator = false) => {
-    if (showRefreshIndicator) setIsRefreshing(true);
+  const fetchData = useCallback(async (isAutoRefresh = false) => {
+    if (isAutoRefresh) setIsRefreshing(true);
     await loadMachines();
     setLastUpdated(formatTimestamp());
-    if (showRefreshIndicator) setIsRefreshing(false);
+    if (isAutoRefresh) setIsRefreshing(false);
+    setIsInitialLoad(false);
   }, [loadMachines, formatTimestamp]);
 
   // Initial load
   useEffect(() => {
-    fetchData();
+    fetchData(false);
   }, [fetchData]);
 
   // Auto-refresh every 10 seconds
@@ -159,7 +161,8 @@ const MachineStatusTable = () => {
     );
   }
 
-  if (isLoading) {
+  // Only show full-screen loader on initial load
+  if (isInitialLoad && machines.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
