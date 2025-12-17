@@ -97,9 +97,9 @@ async function getMachineHours(req: VercelRequest, res: VercelResponse, connecti
     id: row.id,
     logTime: row.log_time,
     machineName: row.machine_name,
-    runHour: row.run_hour,
-    stopHour: row.stop_hour,
-    warningHour: row.warning_hour,
+    runHour: Number(row.run_hour),
+    stopHour: Number(row.stop_hour),
+    warningHour: Number(row.warning_hour) || 0,
     runStatus: row.run_status,
     stopStatus: row.stop_status,
     reworkStatus: row.rework_status
