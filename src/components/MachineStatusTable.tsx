@@ -1,10 +1,12 @@
 // src/components/MachineStatusTable.tsx
-import { useEffect, memo, useMemo } from 'react';
+import { useEffect, memo, useMemo, useState, useCallback, useRef } from 'react';
 import { ColumnDef, CellContext } from '@tanstack/react-table';
 import { useMachineStore } from '../store/useMachineStore';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Machine } from '../types';
 import DataTable from './DataTable';
+
+const REFRESH_INTERVAL = 10000; // 10 seconds
 
 // Helper functions for cell styling
 const getStateClass = (state: string) => {
@@ -91,10 +93,49 @@ const machineColumns: ColumnDef<Machine, unknown>[] = [
 
 const MachineStatusTable = () => {
   const { machines, availableGroups, loadMachines, isLoading, error } = useMachineStore();
+  const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Format timestamp
+  const formatTimestamp = useCallback(() => {
+    const now = new Date();
+    return now.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  }, []);
+
+  // Fetch data and update timestamp
+  const fetchData = useCallback(async (showRefreshIndicator = false) => {
+    if (showRefreshIndicator) setIsRefreshing(true);
+    await loadMachines();
+    setLastUpdated(formatTimestamp());
+    if (showRefreshIndicator) setIsRefreshing(false);
+  }, [loadMachines, formatTimestamp]);
+
+  // Initial load
   useEffect(() => {
-    loadMachines();
-  }, [loadMachines]);
+    fetchData();
+  }, [fetchData]);
+
+  // Auto-refresh every 10 seconds
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      fetchData(true);
+    }, REFRESH_INTERVAL);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [fetchData]);
 
   // Split machines into left and right tables dynamically
   const { leftMachines, rightMachines } = useMemo(() => {
@@ -108,20 +149,6 @@ const MachineStatusTable = () => {
       rightMachines: machines.filter(m => rightGroups.includes(m.group))
     };
   }, [machines, availableGroups]);
-
-  // Get current timestamp
-  const lastUpdated = useMemo(() => {
-    const now = new Date();
-    return now.toLocaleString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-  }, []);
 
   if (error) {
     return (
@@ -167,7 +194,15 @@ const MachineStatusTable = () => {
 
       {/* Footer - Fixed at bottom */}
       <div className="flex-shrink-0 pt-3 pb-1 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
-        <span>LAST UPDATED TIME : {lastUpdated}</span>
+        <div className="flex items-center gap-2">
+          <span>LAST UPDATED TIME : {lastUpdated}</span>
+          {isRefreshing && (
+            <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+          )}
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            (Auto-refresh: 10s)
+          </span>
+        </div>
         <span>Copyright &copy; 2023 Tire Mold (Thailand) Co., Ltd. (Bridgestone Group)</span>
       </div>
     </div>
