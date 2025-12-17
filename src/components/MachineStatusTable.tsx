@@ -2,7 +2,7 @@
 import { useEffect, memo, useMemo, useState, useCallback, useRef } from 'react';
 import { ColumnDef, CellContext } from '@tanstack/react-table';
 import { useMachineStore } from '../store/useMachineStore';
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { Machine } from '../types';
 import DataTable from './DataTable';
 
@@ -94,7 +94,6 @@ const machineColumns: ColumnDef<Machine, unknown>[] = [
 const MachineStatusTable = () => {
   const { machines, availableGroups, loadMachines, error } = useMachineStore();
   const [lastUpdated, setLastUpdated] = useState<string>('');
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -112,24 +111,22 @@ const MachineStatusTable = () => {
     });
   }, []);
 
-  // Fetch data and update timestamp
-  const fetchData = useCallback(async (isAutoRefresh = false) => {
-    if (isAutoRefresh) setIsRefreshing(true);
+  // Fetch data and update timestamp (silent refresh - no loading indicator)
+  const fetchData = useCallback(async () => {
     await loadMachines();
     setLastUpdated(formatTimestamp());
-    if (isAutoRefresh) setIsRefreshing(false);
     setIsInitialLoad(false);
   }, [loadMachines, formatTimestamp]);
 
   // Initial load
   useEffect(() => {
-    fetchData(false);
+    fetchData();
   }, [fetchData]);
 
-  // Auto-refresh every 10 seconds
+  // Auto-refresh every 10 seconds (silent update)
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      fetchData(true);
+      fetchData();
     }, REFRESH_INTERVAL);
 
     return () => {
@@ -199,9 +196,6 @@ const MachineStatusTable = () => {
       <div className="flex-shrink-0 pt-3 pb-1 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
         <div className="flex items-center gap-2">
           <span>LAST UPDATED TIME : {lastUpdated}</span>
-          {isRefreshing && (
-            <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
-          )}
           <span className="text-xs text-gray-400 dark:text-gray-500">
             (Auto-refresh: 10s)
           </span>
