@@ -16,6 +16,7 @@ interface MachineHoursData {
   machineName: string;
   runHour: number;
   stopHour: number;
+  warningHour: number;
   runStatus: number;
   stopStatus: number;
   reworkStatus: number | null;
@@ -64,6 +65,7 @@ export interface TimelineApiData {
   monthlyTarget: number;
   runHour: number;
   stopHour: number;
+  warningHour: number;
   actualRatio1: number;
   trueRatio1: number;
 }
@@ -214,13 +216,33 @@ export const machineStatusApi = {
   },
 };
 
+// Timeline segment data (individual records for timeline visualization)
+export interface TimelineSegmentData {
+  id: number;
+  machineName: string;
+  groupName: string;
+  logTime: string;
+  runHour: number;
+  stopHour: number;
+  runStatus: number;
+  stopStatus: number;
+}
+
 // Timeline API (for timeline viewer with date range filter)
 export const timelineApi = {
-  // Get timeline data with date range filter
+  // Get timeline data with date range filter (aggregated)
   async getByDateRange(from: Date, to: Date): Promise<TimelineApiData[]> {
     const fromStr = from.toISOString();
     const toStr = to.toISOString();
     const response = await fetchApi<TimelineApiData[]>(`/timeline-data?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`);
+    return response.data || [];
+  },
+
+  // Get individual timeline segments for visualization
+  async getSegments(from: Date, to: Date): Promise<TimelineSegmentData[]> {
+    const fromStr = from.toISOString();
+    const toStr = to.toISOString();
+    const response = await fetchApi<TimelineSegmentData[]>(`/timeline-segments?from=${encodeURIComponent(fromStr)}&to=${encodeURIComponent(toStr)}`);
     return response.data || [];
   },
 };

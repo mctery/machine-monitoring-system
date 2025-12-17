@@ -36,7 +36,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { from, to } = req.query;
 
-  // Validate date params
   if (!from || !to) {
     return res.status(400).json({ error: 'Missing required parameters: from, to' });
   }
@@ -55,42 +54,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const fromStr = fromDate.toISOString().slice(0, 19).replace('T', ' ');
     const toStr = toDate.toISOString().slice(0, 19).replace('T', ' ');
 
-    // Get timeline data with date range filter
-    // Join machine_hours with machine_settings to get group and target info
+    // Get individual machine_hours records for timeline segments
     const sql = `
-      WITH range_stats AS (
-        SELECT
-          mh.machine_name,
-          SUM(mh.run_hour) as total_run,
-          SUM(mh.stop_hour) as total_stop,
-          SUM(COALESCE(mh.warning_hour, 0)) as total_warning
-        FROM machine_hours mh
-        WHERE mh.log_time >= ? AND mh.log_time <= ?
-        GROUP BY mh.machine_name
-      )
       SELECT
-        ms.machine_name as machineName,
-        ms.group_name as groupName,
-        ms.weekly_target as weeklyTarget,
-        ms.monthly_target as monthlyTarget,
-        COALESCE(rs.total_run, 0) as runHour,
-        COALESCE(rs.total_stop, 0) as stopHour,
-        COALESCE(rs.total_warning, 0) as warningHour,
-        -- Actual Ratio 1 = (Run / (Run + Stop)) * 100
-        ROUND(CASE
-          WHEN (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0)) > 0
-          THEN (COALESCE(rs.total_run, 0) / (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0))) * 100
-          ELSE 0
-        END, 2) as actualRatio1,
-        -- True Ratio 1 = ((Run - Warning) / (Run + Stop)) * 100
-        ROUND(CASE
-          WHEN (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0)) > 0
-          THEN ((COALESCE(rs.total_run, 0) - COALESCE(rs.total_warning, 0)) / (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0))) * 100
-          ELSE 0
-        END, 2) as trueRatio1
-      FROM machine_settings ms
-      LEFT JOIN range_stats rs ON ms.machine_name = rs.machine_name
-      ORDER BY ms.group_name, ms.machine_name
+        mh.id,
+        mh.machine_name as machineName,
+        mh.log_time as logTime,
+        mh.run_hour as runHour,
+        mh.stop_hour as stopHour,
+        mh.run_status as runStatus,
+        mh.stop_status as stopStatus,
+        ms.group_name as groupName
+      FROM machine_hours mh
+      LEFT JOIN machine_settings ms ON mh.machine_name = ms.machine_name
+      WHERE mh.log_time >= ? AND mh.log_time <= ?
+      ORDER BY mh.machine_name, mh.log_time ASC
     `;
 
     const [rows] = await connection.execute(sql, [fromStr, toStr]);

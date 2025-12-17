@@ -1,7 +1,7 @@
 // src/store/useMachineStore.ts
 import { create } from 'zustand';
-import { Machine, TimelineData, DateRange } from '../types';
-import { machineStatusApi, MachineStatusData, timelineApi, TimelineApiData } from '../lib/api';
+import { Machine, TimelineData, DateRange, TimelineSegment } from '../types';
+import { machineStatusApi, MachineStatusData, timelineApi, TimelineApiData, TimelineSegmentData } from '../lib/api';
 
 // Convert joined data to Machine type
 const mapStatusToMachine = (data: MachineStatusData): Machine => ({
@@ -18,57 +18,82 @@ const mapStatusToMachine = (data: MachineStatusData): Machine => ({
   monthlyTargetRatio: data.monthlyTarget,
 });
 
+// Build timeline segments from individual machine_hours records
+const buildTimelineSegments = (
+  segments: TimelineSegmentData[],
+  machineName: string
+): TimelineSegment[] => {
+  const machineSegments = segments.filter(s => s.machineName === machineName);
+  const timeline: TimelineSegment[] = [];
+
+  for (const segment of machineSegments) {
+    const logTime = new Date(segment.logTime);
+
+    // Add RUN segment if runHour > 0
+    if (segment.runHour > 0) {
+      const runDuration = segment.runHour;
+      timeline.push({
+        start: logTime,
+        end: new Date(logTime.getTime() + runDuration * 60 * 60 * 1000),
+        state: 'RUN',
+        duration: runDuration
+      });
+    }
+
+    // Add STOP segment if stopHour > 0
+    if (segment.stopHour > 0) {
+      const stopStart = segment.runHour > 0
+        ? new Date(logTime.getTime() + segment.runHour * 60 * 60 * 1000)
+        : logTime;
+      const stopDuration = segment.stopHour;
+      timeline.push({
+        start: stopStart,
+        end: new Date(stopStart.getTime() + stopDuration * 60 * 60 * 1000),
+        state: 'STOP',
+        duration: stopDuration
+      });
+    }
+  }
+
+  return timeline;
+};
+
 // Convert API data to TimelineData type (with group averages calculated)
 const mapToTimelineData = (
   data: TimelineApiData,
   groupAverages: Map<string, { avgActualRatio1: number; avgTrueRatio1: number }>,
-  dateRange: DateRange
+  segments: TimelineSegmentData[]
 ): TimelineData => {
-  const totalHours = data.runHour + data.stopHour;
-  const runHours = totalHours > 0 ? (data.runHour / totalHours) * 24 : 0;
-  const stopHours = totalHours > 0 ? (data.stopHour / totalHours) * 24 : 24;
+  const warningHours = data.warningHour || 0;
 
   // Get group averages
   const groupAvg = groupAverages.get(data.groupName) || { avgActualRatio1: 0, avgTrueRatio1: 0 };
 
-  // Generate timeline segments
-  const dayStart = new Date(dateRange.from);
-  dayStart.setHours(0, 0, 0, 0);
+  // Build timeline from actual segments data
+  const timeline = buildTimelineSegments(segments, data.machineName);
 
-  const timeline: import('../types').TimelineSegment[] = [];
+  // Calculate total run and stop from timeline
+  const totalRun = timeline.filter(t => t.state === 'RUN').reduce((sum, t) => sum + t.duration, 0);
+  const totalStop = timeline.filter(t => t.state === 'STOP').reduce((sum, t) => sum + t.duration, 0);
 
-  if (runHours > 0) {
-    timeline.push({
-      start: dayStart,
-      end: new Date(dayStart.getTime() + runHours * 60 * 60 * 1000),
-      state: 'RUN',
-      duration: runHours
-    });
-  }
-  if (stopHours > 0) {
-    const stopStart = new Date(dayStart.getTime() + runHours * 60 * 60 * 1000);
-    timeline.push({
-      start: stopStart,
-      end: new Date(stopStart.getTime() + stopHours * 60 * 60 * 1000),
-      state: 'STOP',
-      duration: stopHours
-    });
-  }
+  // Calculate Ratio 2 values (Group averages)
+  const actualRatio2 = groupAvg.avgActualRatio1; // Group average of Actual Ratio 1
+  const trueRatio2 = groupAvg.avgTrueRatio1;     // Group average of True Ratio 1
 
-  // WARNING RATIO = Actual Ratio2 - True Ratio2
-  const warningRatio = Number((groupAvg.avgActualRatio1 - groupAvg.avgTrueRatio1).toFixed(2));
+  // WARNING RATIO = ACTUAL RATIO 2 - TRUE RATIO 2
+  const warningRatio = Number((actualRatio2 - trueRatio2).toFixed(2));
 
   return {
     machineName: data.machineName,
     groupName: data.groupName,
-    run: runHours,
-    warning: 0, // No warning data in database yet
-    stop: stopHours,
+    run: totalRun,
+    warning: warningHours,
+    stop: totalStop,
     actualRatio1: data.actualRatio1,
-    actualRatio2: groupAvg.avgActualRatio1, // Group average of actualRatio1
-    trueRatio1: data.trueRatio1, // = ((Run-Warning)/(Run+Stop))*100, but Warning=0 so same as actualRatio1
-    trueRatio2: groupAvg.avgTrueRatio1, // Group average of trueRatio1
-    warningRatio: warningRatio,
+    actualRatio2,
+    trueRatio1: data.trueRatio1,
+    trueRatio2,
+    warningRatio,
     timeline
   };
 };
@@ -153,8 +178,11 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
     try {
       const { dateRange } = get();
 
-      // Fetch from new timeline API with date range filter
-      const data = await timelineApi.getByDateRange(dateRange.from, dateRange.to);
+      // Fetch both aggregated data and individual segments in parallel
+      const [data, segments] = await Promise.all([
+        timelineApi.getByDateRange(dateRange.from, dateRange.to),
+        timelineApi.getSegments(dateRange.from, dateRange.to)
+      ]);
 
       // Calculate group averages for actualRatio2 and trueRatio2
       const groupStats = new Map<string, { sumActual: number; sumTrue: number; count: number }>();
@@ -176,8 +204,8 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
         });
       }
 
-      // Convert to TimelineData type with group averages
-      const timelineData = data.map(d => mapToTimelineData(d, groupAverages, dateRange));
+      // Convert to TimelineData type with group averages and real segments
+      const timelineData = data.map(d => mapToTimelineData(d, groupAverages, segments));
       set({ timelineData, isLoading: false });
     } catch (error) {
       console.error('Failed to load timeline data:', error);

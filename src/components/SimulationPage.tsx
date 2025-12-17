@@ -8,6 +8,7 @@ interface FormData {
   machineName: string;
   runHour: string;
   stopHour: string;
+  warningHour: string;
   runStatus: string;
   stopStatus: string;
   reworkStatus: string;
@@ -19,6 +20,7 @@ interface RecentEntry {
   machineName: string;
   runHour: number;
   stopHour: number;
+  warningHour: number;
   runStatus: number;
   stopStatus: number;
 }
@@ -28,6 +30,7 @@ const initialFormData: FormData = {
   machineName: '',
   runHour: '0.5',
   stopHour: '0.1',
+  warningHour: '0',
   runStatus: '1',
   stopStatus: '0',
   reworkStatus: '',
@@ -96,6 +99,7 @@ const SimulationPage = () => {
         machineName: d.machineName,
         runHour: d.runHour,
         stopHour: d.stopHour,
+        warningHour: d.warningHour,
         runStatus: d.runStatus,
         stopStatus: d.stopStatus,
       })));
@@ -134,6 +138,7 @@ const SimulationPage = () => {
         machineName: formData.machineName,
         runHour: parseFloat(formData.runHour) || 0,
         stopHour: parseFloat(formData.stopHour) || 0,
+        warningHour: parseFloat(formData.warningHour) || 0,
         runStatus: parseInt(formData.runStatus) || 0,
         stopStatus: parseInt(formData.stopStatus) || 0,
         reworkStatus: formData.reworkStatus ? parseInt(formData.reworkStatus) : null,
@@ -166,6 +171,7 @@ const SimulationPage = () => {
         machineName: formData.machineName,
         runHour: status === 'RUN' ? 0.5 : 0,
         stopHour: status === 'STOP' ? 0.5 : 0,
+        warningHour: 0,
         runStatus: status === 'RUN' ? 1 : 0,
         stopStatus: status === 'STOP' ? 1 : 0,
         reworkStatus: null,
@@ -277,8 +283,8 @@ const SimulationPage = () => {
               </div>
             </div>
 
-            {/* Run/Stop Hours */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Run/Stop/Warning Hours */}
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Run Hour
@@ -301,6 +307,20 @@ const SimulationPage = () => {
                   type="number"
                   name="stopHour"
                   value={formData.stopHour}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Warning Hour
+                </label>
+                <input
+                  type="number"
+                  name="warningHour"
+                  value={formData.warningHour}
                   onChange={handleChange}
                   step="0.01"
                   min="0"
@@ -391,6 +411,7 @@ const SimulationPage = () => {
                     <th className="text-left py-2 px-2 text-gray-600 dark:text-gray-400">Machine</th>
                     <th className="text-center py-2 px-2 text-gray-600 dark:text-gray-400">Run</th>
                     <th className="text-center py-2 px-2 text-gray-600 dark:text-gray-400">Stop</th>
+                    <th className="text-center py-2 px-2 text-gray-600 dark:text-gray-400">Warn</th>
                     <th className="text-center py-2 px-2 text-gray-600 dark:text-gray-400">Status</th>
                   </tr>
                 </thead>
@@ -413,6 +434,9 @@ const SimulationPage = () => {
                       </td>
                       <td className="py-2 px-2 text-center text-gray-700 dark:text-gray-300">
                         {entry.stopHour.toFixed(2)}
+                      </td>
+                      <td className="py-2 px-2 text-center text-gray-700 dark:text-gray-300">
+                        {entry.warningHour.toFixed(2)}
                       </td>
                       <td className="py-2 px-2 text-center">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${
