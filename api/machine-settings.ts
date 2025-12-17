@@ -84,12 +84,13 @@ async function getMachineSettings(req: VercelRequest, res: VercelResponse, conne
 
   const [rows] = await connection.execute(sql, params);
 
+  // Convert DECIMAL fields to numbers
   const data = (rows as MachineSettingsRow[]).map((row) => ({
     id: row.id,
     machineName: row.machine_name,
     groupName: row.group_name,
-    weeklyTarget: row.weekly_target,
-    monthlyTarget: row.monthly_target,
+    weeklyTarget: Number(row.weekly_target) || 0,
+    monthlyTarget: Number(row.monthly_target) || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }));

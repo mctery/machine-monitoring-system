@@ -112,6 +112,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const [rows] = await connection.execute(sql, [weekStartStr, monthStartStr]);
 
+    // Convert DECIMAL fields to numbers
+    const data = (rows as Array<{
+      id: number;
+      machineName: string;
+      groupName: string;
+      weeklyTarget: string | number;
+      monthlyTarget: string | number;
+      runHour: string | number | null;
+      stopHour: string | number | null;
+      runStatus: number | null;
+      stopStatus: number | null;
+      reworkStatus: number | null;
+      logTime: Date | null;
+      weeklyActualRatio: string | number;
+      monthlyActualRatio: string | number;
+    }>).map(row => ({
+      id: row.id,
+      machineName: row.machineName,
+      groupName: row.groupName,
+      weeklyTarget: Number(row.weeklyTarget) || 0,
+      monthlyTarget: Number(row.monthlyTarget) || 0,
+      runHour: row.runHour !== null ? Number(row.runHour) : null,
+      stopHour: row.stopHour !== null ? Number(row.stopHour) : null,
+      runStatus: row.runStatus,
+      stopStatus: row.stopStatus,
+      reworkStatus: row.reworkStatus,
+      logTime: row.logTime,
+      weeklyActualRatio: Number(row.weeklyActualRatio) || 0,
+      monthlyActualRatio: Number(row.monthlyActualRatio) || 0
+    }));
+
     // Get unique groups for table splitting
     const groupsSql = `
       SELECT DISTINCT group_name as groupName
@@ -122,9 +153,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const groups = (groupRows as { groupName: string }[]).map(r => r.groupName);
 
     return res.status(200).json({
-      data: rows,
+      data,
       groups,
-      count: (rows as unknown[]).length
+      count: data.length
     });
 
   } catch (error) {

@@ -95,9 +95,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const [rows] = await connection.execute(sql, [fromStr, toStr]);
 
+    // Convert DECIMAL fields to numbers
+    const data = (rows as Array<{
+      machineName: string;
+      groupName: string;
+      weeklyTarget: string | number;
+      monthlyTarget: string | number;
+      runHour: string | number;
+      stopHour: string | number;
+      warningHour: string | number;
+      actualRatio1: string | number;
+      trueRatio1: string | number;
+    }>).map(row => ({
+      machineName: row.machineName,
+      groupName: row.groupName,
+      weeklyTarget: Number(row.weeklyTarget) || 0,
+      monthlyTarget: Number(row.monthlyTarget) || 0,
+      runHour: Number(row.runHour) || 0,
+      stopHour: Number(row.stopHour) || 0,
+      warningHour: Number(row.warningHour) || 0,
+      actualRatio1: Number(row.actualRatio1) || 0,
+      trueRatio1: Number(row.trueRatio1) || 0
+    }));
+
     return res.status(200).json({
-      data: rows,
-      count: (rows as unknown[]).length
+      data,
+      count: data.length
     });
 
   } catch (error) {
