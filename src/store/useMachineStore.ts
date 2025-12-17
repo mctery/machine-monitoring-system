@@ -10,6 +10,7 @@ const mapStatusToMachine = (data: MachineStatusData): Machine => ({
   machineName: data.machineName,
   state: data.runStatus === 1 ? 'RUN' : 'STOP',
   rework: data.reworkStatus !== null ? String(data.reworkStatus) : '',
+  runHours: data.runHour ?? 0,
   stopHours: data.stopHour ?? 0,
   weeklyActualRatio: data.weeklyActualRatio ?? 0,
   weeklyTargetRatio: data.weeklyTarget,

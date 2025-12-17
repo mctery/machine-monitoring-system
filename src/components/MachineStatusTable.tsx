@@ -49,6 +49,13 @@ const machineColumns: ColumnDef<Machine, unknown>[] = [
     meta: { className: 'text-center' },
   },
   {
+    accessorKey: 'runHours',
+    header: () => <span>RUN<br/>(Hours)</span>,
+    enableSorting: true,
+    cell: (props) => (props.getValue() as number).toFixed(2),
+    meta: { className: 'text-center' },
+  },
+  {
     accessorKey: 'stopHours',
     header: () => <span>STOP<br/>(Hours)</span>,
     enableSorting: true,

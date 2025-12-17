@@ -8,6 +8,7 @@ export interface Machine {
   machineName: string;
   state: MachineState;
   rework: string;
+  runHours: number;
   stopHours: number;
   weeklyActualRatio: number;
   weeklyTargetRatio: number;
