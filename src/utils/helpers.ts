@@ -23,12 +23,23 @@ export const getRatioColor = (actual: number, target: number): string => {
 export const getTimelineColor = (state: MachineState): string => {
   switch (state) {
     case 'RUN':
-      return 'bg-green-500';
+      return 'bg-green-500 dark:bg-green-600';
     case 'STOP':
-      return 'bg-yellow-500';
+      return 'bg-yellow-500 dark:bg-yellow-600';
     case 'IDLE':
-      return 'bg-cyan-400';
+      return 'bg-cyan-400 dark:bg-cyan-600';
   }
+};
+
+// Get ratio cell class with dark mode support
+export const getRatioCellClass = (actual: number, target: number): string => {
+  if (actual >= target * 0.8) {
+    return 'bg-green-400 dark:bg-green-700 text-gray-900 dark:text-white';
+  }
+  if (actual >= target * 0.5) {
+    return 'bg-amber-400 dark:bg-amber-600 text-gray-900 dark:text-white';
+  }
+  return 'bg-red-500 dark:bg-red-700 text-white';
 };
 
 export const formatHours = (hours: number): string => {

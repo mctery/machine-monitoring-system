@@ -1,7 +1,7 @@
 // src/components/TimelineViewer.tsx
 import { useEffect, useState, useCallback, memo, useMemo } from 'react';
 import { useMachineStore } from '../store/useMachineStore';
-import { getTimelineColor } from '../utils/helpers';
+import { getTimelineColor, getRatioCellClass } from '../utils/helpers';
 import { format } from 'date-fns';
 import { Calendar, Download, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { TimelineSegment, TimelineData } from '../types';
@@ -41,21 +41,13 @@ const TimelineRow = memo(({ item }: { item: TimelineData }) => {
       <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.warning}</td>
       <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.stop.toFixed(1)}</td>
       <td
-        className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 font-medium"
-        style={{
-          backgroundColor: `rgb(${item.actualRatio1 >= item.trueRatio2 * 0.8 ? '74, 222, 128' : item.actualRatio1 >= item.trueRatio2 * 0.5 ? '251, 191, 36' : '248, 113, 113'})`,
-          color: item.actualRatio1 < item.trueRatio2 * 0.5 ? 'white' : 'black'
-        }}
+        className={`px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.actualRatio1, item.trueRatio2)}`}
       >
         {item.actualRatio1.toFixed(2)}
       </td>
       <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.actualRatio2.toFixed(2)}</td>
       <td
-        className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 font-medium"
-        style={{
-          backgroundColor: `rgb(${item.trueRatio1 >= item.trueRatio2 * 0.8 ? '74, 222, 128' : item.trueRatio1 >= item.trueRatio2 * 0.5 ? '251, 191, 36' : '248, 113, 113'})`,
-          color: item.trueRatio1 < item.trueRatio2 * 0.5 ? 'white' : 'black'
-        }}
+        className={`px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.trueRatio1, item.trueRatio2)}`}
       >
         {item.trueRatio1.toFixed(2)}
       </td>
