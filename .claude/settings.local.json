@@ -7,7 +7,10 @@
       "Bash(git filter-repo:*)",
       "Bash(git remote add:*)",
       "Bash(npx tsc:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "Bash(wc:*)",
+      "Bash(git add:*)"
     ]
   }
 }
