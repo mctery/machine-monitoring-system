@@ -8,16 +8,16 @@ import DataTable from './DataTable';
 
 const REFRESH_INTERVAL = 10000; // 10 seconds
 
-// Helper functions for cell styling
+// Helper functions for cell styling (with softer colors in dark mode)
 const getStateClass = (state: string) => {
-  if (state === 'RUN') return 'bg-yellow-300 text-gray-900 font-medium text-center';
-  if (state === 'STOP') return 'bg-green-400 text-gray-900 font-medium text-center';
+  if (state === 'RUN') return 'bg-yellow-300 dark:bg-yellow-600 text-gray-900 dark:text-white font-medium text-center';
+  if (state === 'STOP') return 'bg-green-400 dark:bg-green-700 text-gray-900 dark:text-white font-medium text-center';
   return 'text-center';
 };
 
 const getRatioClass = (actual: number, target: number) => {
-  if (actual < target) return 'bg-red-500 text-white text-center';
-  return 'bg-green-400 text-gray-900 text-center';
+  if (actual < target) return 'bg-red-500 dark:bg-red-700 text-white text-center';
+  return 'bg-green-400 dark:bg-green-700 text-gray-900 dark:text-white text-center';
 };
 
 // Column definitions for Machine Status
