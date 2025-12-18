@@ -37,3 +37,4 @@ Thumbs.db
 
 /src/generated/prisma
 .env*.local
+api/clear-hours.ts
