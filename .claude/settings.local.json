@@ -12,7 +12,8 @@
       "Bash(wc:*)",
       "Bash(git add:*)",
       "Bash(curl:*)",
-      "Bash(npx tsc --noEmit)"
+      "Bash(npx tsc --noEmit)",
+      "Bash(grep:*)"
     ]
   }
 }
