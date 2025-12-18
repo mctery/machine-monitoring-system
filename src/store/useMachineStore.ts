@@ -29,13 +29,15 @@ const buildTimelineSegments = (
   for (const segment of machineSegments) {
     const logTime = new Date(segment.logTime);
 
-    // Add RUN segment if runHour > 0
+    // Add RUN or REWORK segment if runHour > 0
+    // If reworkStatus === 1, show as REWORK instead of RUN
     if (segment.runHour > 0) {
       const runDuration = segment.runHour;
+      const state = segment.reworkStatus === 1 ? 'REWORK' : 'RUN';
       timeline.push({
         start: logTime,
         end: new Date(logTime.getTime() + runDuration * 60 * 60 * 1000),
-        state: 'RUN',
+        state,
         duration: runDuration
       });
     }

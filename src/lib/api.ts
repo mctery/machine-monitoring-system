@@ -226,6 +226,7 @@ export interface TimelineSegmentData {
   stopHour: number;
   runStatus: number;
   stopStatus: number;
+  reworkStatus: number | null;
 }
 
 // Timeline API (for timeline viewer with date range filter)

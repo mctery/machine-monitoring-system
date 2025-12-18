@@ -64,6 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         mh.stop_hour as stopHour,
         mh.run_status as runStatus,
         mh.stop_status as stopStatus,
+        mh.rework_status as reworkStatus,
         ms.group_name as groupName
       FROM machine_hours mh
       LEFT JOIN machine_settings ms ON mh.machine_name = ms.machine_name
@@ -82,6 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stopHour: string | number;
       runStatus: number;
       stopStatus: number;
+      reworkStatus: number | null;
       groupName: string;
     }>).map(row => ({
       id: row.id,
@@ -91,7 +93,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       runHour: Number(row.runHour) || 0,
       stopHour: Number(row.stopHour) || 0,
       runStatus: row.runStatus,
-      stopStatus: row.stopStatus
+      stopStatus: row.stopStatus,
+      reworkStatus: row.reworkStatus
     }));
 
     return res.status(200).json({
