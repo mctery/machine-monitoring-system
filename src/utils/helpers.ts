@@ -25,9 +25,9 @@ export const getRatioColor = (actual: number, target: number): string => {
 export const getTimelineColor = (state: MachineState): string => {
   switch (state) {
     case 'RUN':
-      return 'bg-green-500 dark:bg-green-600';
-    case 'STOP':
       return 'bg-yellow-500 dark:bg-yellow-600';
+    case 'STOP':
+      return 'bg-green-500 dark:bg-green-600';
     case 'IDLE':
       return 'bg-cyan-400 dark:bg-cyan-600';
     case 'REWORK':
