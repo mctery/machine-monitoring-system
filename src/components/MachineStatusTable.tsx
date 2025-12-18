@@ -17,7 +17,12 @@ const getStateClass = (state: string) => {
 
 const getRatioClass = (actual: number, target: number) => {
   if (actual < target) return 'bg-red-500 dark:bg-red-700 text-white text-center';
-  return 'bg-green-400 dark:bg-green-700 text-gray-900 dark:text-white text-center';
+  return 'text-center';
+};
+
+const getReworkClass = (rework: string) => {
+  if (rework === 'REWORK') return 'bg-red-500 dark:bg-red-700 text-white font-medium text-center';
+  return 'text-center';
 };
 
 // Column definitions for Machine Status
@@ -46,7 +51,17 @@ const machineColumns: ColumnDef<Machine, unknown>[] = [
     accessorKey: 'rework',
     header: 'Rework',
     enableSorting: false,
-    meta: { className: 'text-center' },
+    cell: (props) => {
+      const value = props.getValue();
+      return value === 1 || value === '1' ? 'REWORK' : '';
+    },
+    meta: {
+      cellClassName: (props: CellContext<Machine, unknown>) => {
+        const value = props.getValue();
+        const displayValue = value === 1 || value === '1' ? 'REWORK' : '';
+        return getReworkClass(displayValue);
+      },
+    },
   },
   {
     accessorKey: 'runHours',

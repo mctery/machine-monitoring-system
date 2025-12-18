@@ -151,6 +151,7 @@ const TimelineViewer = () => {
               id="from-date"
               type="datetime-local"
               value={fromDate}
+              max={toDate}
               onChange={(e) => {
                 setFromDate(e.target.value);
                 setValidationError(null);
@@ -166,6 +167,7 @@ const TimelineViewer = () => {
               id="to-date"
               type="datetime-local"
               value={toDate}
+              min={fromDate}
               onChange={(e) => {
                 setToDate(e.target.value);
                 setValidationError(null);
