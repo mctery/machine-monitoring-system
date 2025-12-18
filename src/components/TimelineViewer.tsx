@@ -41,13 +41,13 @@ const TimelineRow = memo(({ item }: { item: TimelineData }) => {
       <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.warning}</td>
       <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.stop.toFixed(1)}</td>
       <td
-        className={`px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.actualRatio1, item.trueRatio2)}`}
+        className={`px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.actualRatio1)}`}
       >
         {item.actualRatio1.toFixed(2)}
       </td>
       <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.actualRatio2.toFixed(2)}</td>
       <td
-        className={`px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.trueRatio1, item.trueRatio2)}`}
+        className={`px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.trueRatio1)}`}
       >
         {item.trueRatio1.toFixed(2)}
       </td>
