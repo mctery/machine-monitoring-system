@@ -1,6 +1,6 @@
 // src/types/index.ts - Consolidated type definitions
 
-export type MachineState = 'STOP' | 'RUN' | 'IDLE';
+export type MachineState = 'STOP' | 'RUN' | 'IDLE' | 'REWORK';
 
 export interface Machine {
   id: string;
