@@ -58,6 +58,8 @@ const SimulationPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [useCustomTime, setUseCustomTime] = useState(false);
+  const [customTime, setCustomTime] = useState(new Date().toISOString().slice(0, 16));
   const timeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update current time every second
@@ -133,8 +135,9 @@ const SimulationPage = () => {
 
     try {
       setIsSubmitting(true);
+      const logTime = useCustomTime ? new Date(customTime).toISOString() : new Date().toISOString();
       await machineHoursApi.create({
-        logTime: new Date().toISOString(),
+        logTime,
         machineName: formData.machineName,
         runHour: parseFloat(formData.runHour) || 0,
         stopHour: parseFloat(formData.stopHour) || 0,
@@ -166,8 +169,9 @@ const SimulationPage = () => {
       setError(null);
       setSuccess(null);
 
+      const logTime = useCustomTime ? new Date(customTime).toISOString() : new Date().toISOString();
       await machineHoursApi.create({
-        logTime: new Date().toISOString(),
+        logTime,
         machineName: formData.machineName,
         runHour: status === 'RUN' ? 0.5 : 0,
         stopHour: status === 'STOP' ? 0.5 : 0,
@@ -272,15 +276,43 @@ const SimulationPage = () => {
               </select>
             </div>
 
-            {/* Log Time - Real-time */}
+            {/* Log Time - Toggle between Current and Custom */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Log Time (Current Time)
-              </label>
-              <div className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-white flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-500 animate-pulse" />
-                <span className="font-mono">{formatDateTime(currentTime)}</span>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Log Time
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {useCustomTime ? 'Custom' : 'Current'}
+                  </span>
+                  <div
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      useCustomTime ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                    onClick={() => setUseCustomTime(!useCustomTime)}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                        useCustomTime ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </div>
+                </label>
               </div>
+              {useCustomTime ? (
+                <input
+                  type="datetime-local"
+                  value={customTime}
+                  onChange={(e) => setCustomTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <div className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-white flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-500 animate-pulse" />
+                  <span className="font-mono">{formatDateTime(currentTime)}</span>
+                </div>
+              )}
             </div>
 
             {/* Run/Stop/Warning Hours */}
