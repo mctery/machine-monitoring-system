@@ -84,6 +84,7 @@ const SimulationPage = () => {
   const [batchIntervalUnit, setBatchIntervalUnit] = useState<IntervalUnit>('hours');
   const [batchPreview, setBatchPreview] = useState<BatchEntry[]>([]);
   const [isBatchInserting, setIsBatchInserting] = useState(false);
+  const [batchInsertProgress, setBatchInsertProgress] = useState(0);
 
   // Update current time every second
   useEffect(() => {
@@ -325,6 +326,7 @@ const SimulationPage = () => {
 
     try {
       setIsBatchInserting(true);
+      setBatchInsertProgress(0);
       setError(null);
       setSuccess(null);
 
@@ -342,10 +344,12 @@ const SimulationPage = () => {
           reworkStatus: entry.reworkStatus,
         });
         insertedCount++;
+        setBatchInsertProgress(insertedCount);
       }
 
       setSuccess(`Successfully inserted ${insertedCount} entries for ${formData.machineName}!`);
       setBatchPreview([]);
+      setBatchInsertProgress(0);
       await loadRecentEntries();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to insert batch data');
@@ -796,24 +800,41 @@ const SimulationPage = () => {
 
                 {/* Insert Button */}
                 {batchPreview.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleBatchInsert}
-                    disabled={isBatchInserting || !formData.machineName}
-                    className="w-full px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                  >
-                    {isBatchInserting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Inserting...
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4" />
-                        Insert All ({batchPreview.length} entries)
-                      </>
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={handleBatchInsert}
+                      disabled={isBatchInserting || !formData.machineName}
+                      className="w-full px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                    >
+                      {isBatchInserting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Inserting... {batchInsertProgress.toLocaleString()} / {batchPreview.length.toLocaleString()}
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4" />
+                          Insert All ({batchPreview.length.toLocaleString()} entries)
+                        </>
+                      )}
+                    </button>
+
+                    {/* Progress Bar */}
+                    {isBatchInserting && (
+                      <div className="space-y-1">
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                          <div
+                            className="bg-green-500 h-full rounded-full transition-all duration-150"
+                            style={{ width: `${(batchInsertProgress / batchPreview.length) * 100}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-center text-gray-500 dark:text-gray-400">
+                          {((batchInsertProgress / batchPreview.length) * 100).toFixed(1)}% complete
+                        </div>
+                      </div>
                     )}
-                  </button>
+                  </div>
                 )}
               </div>
             )}

@@ -6,6 +6,7 @@ import { useMachineStore } from '../store/useMachineStore';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Machine } from '../types';
 import DataTable from './DataTable';
+import AnimatedCell from './AnimatedCell';
 import { AnimatePresence, staggerContent, staggerItem } from './PageTransition';
 
 const REFRESH_INTERVAL = 10000; // 10 seconds
@@ -45,6 +46,12 @@ const machineColumns: ColumnDef<Machine, unknown>[] = [
     accessorKey: 'state',
     header: 'State',
     enableSorting: true,
+    cell: (props) => (
+      <AnimatedCell
+        value={props.getValue() as string}
+        cellKey={`${props.row.original.machineName}-state`}
+      />
+    ),
     meta: {
       cellClassName: (props: CellContext<Machine, unknown>) => getStateClass(props.getValue() as string),
     },
@@ -55,7 +62,13 @@ const machineColumns: ColumnDef<Machine, unknown>[] = [
     enableSorting: false,
     cell: (props) => {
       const value = props.getValue();
-      return value === 1 || value === '1' ? 'REWORK' : '';
+      const displayValue = value === 1 || value === '1' ? 'REWORK' : '';
+      return (
+        <AnimatedCell
+          value={displayValue}
+          cellKey={`${props.row.original.machineName}-rework`}
+        />
+      );
     },
     meta: {
       cellClassName: (props: CellContext<Machine, unknown>) => {
@@ -69,20 +82,36 @@ const machineColumns: ColumnDef<Machine, unknown>[] = [
     accessorKey: 'runHours',
     header: () => <span>RUN<br/>(Hours)</span>,
     enableSorting: true,
-    cell: (props) => (props.getValue() as number).toFixed(2),
+    cell: (props) => (
+      <AnimatedCell
+        value={(props.getValue() as number).toFixed(2)}
+        cellKey={`${props.row.original.machineName}-runHours`}
+      />
+    ),
     meta: { className: 'text-center' },
   },
   {
     accessorKey: 'stopHours',
     header: () => <span>STOP<br/>(Hours)</span>,
     enableSorting: true,
-    cell: (props) => (props.getValue() as number).toFixed(2),
+    cell: (props) => (
+      <AnimatedCell
+        value={(props.getValue() as number).toFixed(2)}
+        cellKey={`${props.row.original.machineName}-stopHours`}
+      />
+    ),
     meta: { className: 'text-center' },
   },
   {
     accessorKey: 'weeklyActualRatio',
     header: () => <span>Weekly Actual<br/>Ratio(%)</span>,
     enableSorting: true,
+    cell: (props) => (
+      <AnimatedCell
+        value={props.getValue() as number}
+        cellKey={`${props.row.original.machineName}-weeklyActual`}
+      />
+    ),
     meta: {
       cellClassName: (props: CellContext<Machine, unknown>) => {
         const row = props.row.original;
@@ -100,6 +129,12 @@ const machineColumns: ColumnDef<Machine, unknown>[] = [
     accessorKey: 'monthlyActualRatio',
     header: () => <span>Monthly Actual<br/>Ratio(%)</span>,
     enableSorting: true,
+    cell: (props) => (
+      <AnimatedCell
+        value={props.getValue() as number}
+        cellKey={`${props.row.original.machineName}-monthlyActual`}
+      />
+    ),
     meta: {
       cellClassName: (props: CellContext<Machine, unknown>) => {
         const row = props.row.original;
