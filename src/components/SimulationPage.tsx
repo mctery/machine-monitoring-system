@@ -140,9 +140,9 @@ const SimulationPage = () => {
 
     setFormData(prev => ({
       ...prev,
-      runHour: (Math.random() * 0.9 + 0.1).toFixed(2), // 0.1 - 1.0
-      stopHour: (Math.random() * 0.5).toFixed(2), // 0 - 0.5
-      warningHour: (Math.random() * 0.2).toFixed(2), // 0 - 0.2
+      runHour: Math.floor(Math.random() * 1001).toString(), // 0 - 1000
+      stopHour: Math.floor(Math.random() * 1001).toString(), // 0 - 1000
+      warningHour: '0', // always 0
       runStatus: isRun ? '1' : '0',
       stopStatus: isRun ? '0' : '1',
       reworkStatus: isRework ? '1' : '0',
