@@ -1,6 +1,6 @@
 // src/components/SimulationPage.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Loader2, AlertCircle, CheckCircle, Clock, Shuffle } from 'lucide-react';
+import { Plus, Loader2, AlertCircle, CheckCircle, Clock, Shuffle, Calendar, Play, Trash2, Eye } from 'lucide-react';
 import { machineHoursApi, machineSettingsApi, MachineSettingsData } from '../lib/api';
 
 interface FormData {
@@ -24,6 +24,18 @@ interface RecentEntry {
   runStatus: number;
   stopStatus: number;
 }
+
+interface BatchEntry {
+  logTime: Date;
+  runHour: number;
+  stopHour: number;
+  warningHour: number;
+  runStatus: number;
+  stopStatus: number;
+  reworkStatus: number | null;
+}
+
+type IntervalUnit = 'seconds' | 'minutes' | 'hours';
 
 const initialFormData: FormData = {
   logTime: new Date().toISOString().slice(0, 16),
@@ -61,6 +73,15 @@ const SimulationPage = () => {
   const [useCustomTime, setUseCustomTime] = useState(false);
   const [customTime, setCustomTime] = useState(new Date().toISOString().slice(0, 16));
   const timeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Batch Insert State
+  const [showBatchMode, setShowBatchMode] = useState(false);
+  const [batchFromDate, setBatchFromDate] = useState(new Date().toISOString().slice(0, 16));
+  const [batchToDate, setBatchToDate] = useState(new Date(Date.now() + 3600000).toISOString().slice(0, 16)); // +1 hour
+  const [batchInterval, setBatchInterval] = useState(1);
+  const [batchIntervalUnit, setBatchIntervalUnit] = useState<IntervalUnit>('hours');
+  const [batchPreview, setBatchPreview] = useState<BatchEntry[]>([]);
+  const [isBatchInserting, setIsBatchInserting] = useState(false);
 
   // Update current time every second
   useEffect(() => {
@@ -217,6 +238,110 @@ const SimulationPage = () => {
       setError(err instanceof Error ? err.message : 'Failed to add data');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Generate random entry for batch
+  const generateRandomEntry = (logTime: Date): BatchEntry => {
+    const isRun = Math.random() > 0.5;
+    const isRework = Math.random() > 0.7; // 30% chance
+    return {
+      logTime,
+      runHour: Math.floor(Math.random() * 1001), // 0 - 1000
+      stopHour: Math.floor(Math.random() * 1001), // 0 - 1000
+      warningHour: 0,
+      runStatus: isRun ? 1 : 0,
+      stopStatus: isRun ? 0 : 1,
+      reworkStatus: isRework ? 1 : null,
+    };
+  };
+
+  // Generate batch preview
+  const generateBatchPreview = () => {
+    const from = new Date(batchFromDate);
+    const to = new Date(batchToDate);
+
+    if (from >= to) {
+      setError('From date must be before To date');
+      return;
+    }
+
+    // Calculate interval in milliseconds
+    let intervalMs = batchInterval;
+    switch (batchIntervalUnit) {
+      case 'seconds':
+        intervalMs *= 1000;
+        break;
+      case 'minutes':
+        intervalMs *= 60 * 1000;
+        break;
+      case 'hours':
+        intervalMs *= 60 * 60 * 1000;
+        break;
+    }
+
+    // Generate entries
+    const entries: BatchEntry[] = [];
+    let currentTime = from.getTime();
+    const endTime = to.getTime();
+
+    // Limit to 1000 entries to prevent browser freeze
+    const maxEntries = 1000;
+    while (currentTime <= endTime && entries.length < maxEntries) {
+      entries.push(generateRandomEntry(new Date(currentTime)));
+      currentTime += intervalMs;
+    }
+
+    if (entries.length >= maxEntries) {
+      setError(`Preview limited to ${maxEntries} entries. Adjust interval or date range.`);
+    } else {
+      setError(null);
+    }
+
+    setBatchPreview(entries);
+    setSuccess(`Generated ${entries.length} entries for preview`);
+  };
+
+  // Batch insert all entries
+  const handleBatchInsert = async () => {
+    if (!formData.machineName) {
+      setError('Please select a machine');
+      return;
+    }
+
+    if (batchPreview.length === 0) {
+      setError('Please generate preview first');
+      return;
+    }
+
+    try {
+      setIsBatchInserting(true);
+      setError(null);
+      setSuccess(null);
+
+      // Insert all entries
+      let insertedCount = 0;
+      for (const entry of batchPreview) {
+        await machineHoursApi.create({
+          logTime: entry.logTime.toISOString(),
+          machineName: formData.machineName,
+          runHour: entry.runHour,
+          stopHour: entry.stopHour,
+          warningHour: entry.warningHour,
+          runStatus: entry.runStatus,
+          stopStatus: entry.stopStatus,
+          reworkStatus: entry.reworkStatus,
+        });
+        insertedCount++;
+      }
+
+      setSuccess(`Successfully inserted ${insertedCount} entries for ${formData.machineName}!`);
+      setBatchPreview([]);
+      await loadRecentEntries();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to insert batch data');
+    } finally {
+      setIsBatchInserting(false);
     }
   };
 
@@ -501,11 +626,184 @@ const SimulationPage = () => {
           </form>
         </div>
 
-        {/* Recent Entries Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-            Recent Entries (Last 10)
-          </h2>
+        {/* Right Column */}
+        <div className="space-y-6">
+          {/* Batch Insert Toggle */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Batch Insert
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowBatchMode(!showBatchMode)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                  showBatchMode
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {showBatchMode ? 'Hide' : 'Show'}
+              </button>
+            </div>
+
+            {showBatchMode && (
+              <div className="space-y-4">
+                {/* Date Range */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                      From
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={batchFromDate}
+                      onChange={(e) => setBatchFromDate(e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                      To
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={batchToDate}
+                      onChange={(e) => setBatchToDate(e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Interval */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                    Interval (every)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={batchInterval}
+                      onChange={(e) => setBatchInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                      min="1"
+                      className="w-20 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                    <select
+                      value={batchIntervalUnit}
+                      onChange={(e) => setBatchIntervalUnit(e.target.value as IntervalUnit)}
+                      className="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="seconds">Seconds</option>
+                      <option value="minutes">Minutes</option>
+                      <option value="hours">Hours</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={generateBatchPreview}
+                    disabled={!formData.machineName}
+                    className="flex-1 px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Preview ({batchPreview.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBatchPreview([])}
+                    disabled={batchPreview.length === 0}
+                    className="px-3 py-2 bg-gray-400 hover:bg-gray-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Preview Table */}
+                {batchPreview.length > 0 && (
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                    <div className="max-h-48 overflow-y-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                          <tr>
+                            <th className="py-1.5 px-2 text-left text-gray-600 dark:text-gray-400">#</th>
+                            <th className="py-1.5 px-2 text-left text-gray-600 dark:text-gray-400">Time</th>
+                            <th className="py-1.5 px-2 text-center text-gray-600 dark:text-gray-400">Run</th>
+                            <th className="py-1.5 px-2 text-center text-gray-600 dark:text-gray-400">Stop</th>
+                            <th className="py-1.5 px-2 text-center text-gray-600 dark:text-gray-400">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {batchPreview.slice(0, 50).map((entry, idx) => (
+                            <tr key={idx} className="border-t border-gray-100 dark:border-gray-700">
+                              <td className="py-1 px-2 text-gray-500">{idx + 1}</td>
+                              <td className="py-1 px-2 text-gray-700 dark:text-gray-300">
+                                {entry.logTime.toLocaleString('en-US', {
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </td>
+                              <td className="py-1 px-2 text-center text-yellow-600">{entry.runHour}</td>
+                              <td className="py-1 px-2 text-center text-green-600">{entry.stopHour}</td>
+                              <td className="py-1 px-2 text-center">
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                  entry.reworkStatus === 1
+                                    ? 'bg-red-200 text-red-800'
+                                    : entry.runStatus === 1
+                                    ? 'bg-yellow-200 text-yellow-800'
+                                    : 'bg-green-200 text-green-800'
+                                }`}>
+                                  {entry.reworkStatus === 1 ? 'RW' : entry.runStatus === 1 ? 'RUN' : 'STOP'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {batchPreview.length > 50 && (
+                      <div className="text-xs text-gray-500 text-center py-1 bg-gray-50 dark:bg-gray-700">
+                        Showing 50 of {batchPreview.length} entries
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Insert Button */}
+                {batchPreview.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleBatchInsert}
+                    disabled={isBatchInserting || !formData.machineName}
+                    className="w-full px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  >
+                    {isBatchInserting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Inserting...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4" />
+                        Insert All ({batchPreview.length} entries)
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Recent Entries Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+              Recent Entries (Last 10)
+            </h2>
 
           {recentEntries.length === 0 ? (
             <p className="text-gray-500 dark:text-gray-400 text-center py-8">
@@ -562,6 +860,7 @@ const SimulationPage = () => {
               </table>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>
