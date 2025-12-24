@@ -1,6 +1,6 @@
 // src/components/SimulationPage.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Loader2, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Loader2, AlertCircle, CheckCircle, Clock, Shuffle } from 'lucide-react';
 import { machineHoursApi, machineSettingsApi, MachineSettingsData } from '../lib/api';
 
 interface FormData {
@@ -134,6 +134,21 @@ const SimulationPage = () => {
     setSuccess(null);
   };
 
+  const handleRandomize = () => {
+    const isRun = Math.random() > 0.5;
+    const isRework = Math.random() > 0.7; // 30% chance of rework
+
+    setFormData(prev => ({
+      ...prev,
+      runHour: (Math.random() * 0.9 + 0.1).toFixed(2), // 0.1 - 1.0
+      stopHour: (Math.random() * 0.5).toFixed(2), // 0 - 0.5
+      warningHour: (Math.random() * 0.2).toFixed(2), // 0 - 0.2
+      runStatus: isRun ? '1' : '0',
+      stopStatus: isRun ? '0' : '1',
+      reworkStatus: isRework ? '1' : '0',
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -263,6 +278,13 @@ const SimulationPage = () => {
                 className="flex-1 px-4 py-2 bg-green-400 hover:bg-green-500 text-gray-900 font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 + STOP
+              </button>
+              <button
+                type="button"
+                onClick={handleRandomize}
+                className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-lg transition-colors flex items-center gap-1"
+              >
+                <Shuffle className="w-4 h-4" />
               </button>
             </div>
           </div>
