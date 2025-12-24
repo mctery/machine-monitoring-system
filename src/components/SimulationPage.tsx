@@ -185,7 +185,7 @@ const SimulationPage = () => {
     }
   };
 
-  const handleQuickAdd = async (status: 'RUN' | 'STOP') => {
+  const handleQuickAdd = async (status: 'RUN' | 'STOP' | 'REWORK') => {
     if (!formData.machineName) {
       setError('Please select a machine');
       return;
@@ -197,18 +197,21 @@ const SimulationPage = () => {
       setSuccess(null);
 
       const logTime = useCustomTime ? new Date(customTime).toISOString() : new Date().toISOString();
+      const runHourValue = parseFloat(formData.runHour) || 0;
+      const stopHourValue = parseFloat(formData.stopHour) || 0;
+
       await machineHoursApi.create({
         logTime,
         machineName: formData.machineName,
-        runHour: status === 'RUN' ? 0.5 : 0,
-        stopHour: status === 'STOP' ? 0.5 : 0,
+        runHour: status === 'STOP' ? 0 : runHourValue,
+        stopHour: status === 'STOP' ? stopHourValue : 0,
         warningHour: 0,
-        runStatus: status === 'RUN' ? 1 : 0,
+        runStatus: status === 'STOP' ? 0 : 1,
         stopStatus: status === 'STOP' ? 1 : 0,
-        reworkStatus: null,
+        reworkStatus: status === 'REWORK' ? 1 : null,
       });
 
-      setSuccess(`Quick added ${status} for ${formData.machineName}!`);
+      setSuccess(`Quick added ${status} (${status === 'STOP' ? stopHourValue : runHourValue}h) for ${formData.machineName}!`);
       await loadRecentEntries();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add data');
@@ -270,12 +273,12 @@ const SimulationPage = () => {
                 Random
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => handleQuickAdd('RUN')}
                 disabled={isSubmitting || !formData.machineName}
-                className="px-4 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] shadow-md hover:shadow-lg text-lg"
+                className="px-3 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] shadow-md hover:shadow-lg"
               >
                 + RUN
               </button>
@@ -283,10 +286,22 @@ const SimulationPage = () => {
                 type="button"
                 onClick={() => handleQuickAdd('STOP')}
                 disabled={isSubmitting || !formData.machineName}
-                className="px-4 py-3 bg-green-400 hover:bg-green-500 text-gray-900 font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] shadow-md hover:shadow-lg text-lg"
+                className="px-3 py-2.5 bg-green-400 hover:bg-green-500 text-gray-900 font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] shadow-md hover:shadow-lg"
               >
                 + STOP
               </button>
+              <button
+                type="button"
+                onClick={() => handleQuickAdd('REWORK')}
+                disabled={isSubmitting || !formData.machineName}
+                className="px-3 py-2.5 bg-red-400 hover:bg-red-500 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] shadow-md hover:shadow-lg"
+              >
+                + REWORK
+              </button>
+            </div>
+            {/* Quick Add Info */}
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+              Uses: Run Hour = {formData.runHour}h, Stop Hour = {formData.stopHour}h
             </div>
           </div>
 
