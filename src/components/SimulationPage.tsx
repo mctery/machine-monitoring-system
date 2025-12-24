@@ -256,10 +256,15 @@ const SimulationPage = () => {
   const generateRandomEntry = (logTime: Date): BatchEntry => {
     const isRun = Math.random() > 0.5;
     const isRework = Math.random() > 0.7; // 30% chance
+    const hourValue = Math.floor(Math.random() * 1001); // 0 - 1000
+
+    // RUN: runHour has value, stopHour = 0
+    // STOP: stopHour has value, runHour = 0
+    // REWORK: keeps the RUN/STOP status, just adds rework flag
     return {
       logTime,
-      runHour: Math.floor(Math.random() * 1001), // 0 - 1000
-      stopHour: Math.floor(Math.random() * 1001), // 0 - 1000
+      runHour: isRun ? hourValue : 0,
+      stopHour: isRun ? 0 : hourValue,
       warningHour: 0,
       runStatus: isRun ? 1 : 0,
       stopStatus: isRun ? 0 : 1,
