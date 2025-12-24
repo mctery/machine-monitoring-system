@@ -223,18 +223,27 @@ const SimulationPage = () => {
       const runHourValue = parseFloat(formData.runHour) || 0;
       const stopHourValue = parseFloat(formData.stopHour) || 0;
 
+      // REWORK keeps current RUN/STOP status from form
+      const isRework = status === 'REWORK';
+      const isStop = status === 'STOP' || (isRework && formData.runStatus === '0');
+      const isRun = status === 'RUN' || (isRework && formData.runStatus === '1');
+
       await machineHoursApi.create({
         logTime,
         machineName: formData.machineName,
-        runHour: status === 'STOP' ? 0 : runHourValue,
-        stopHour: status === 'STOP' ? stopHourValue : 0,
+        runHour: isStop ? 0 : runHourValue,
+        stopHour: isStop ? stopHourValue : 0,
         warningHour: 0,
-        runStatus: status === 'STOP' ? 0 : 1,
-        stopStatus: status === 'STOP' ? 1 : 0,
-        reworkStatus: status === 'REWORK' ? 1 : null,
+        runStatus: isRun ? 1 : 0,
+        stopStatus: isStop ? 1 : 0,
+        reworkStatus: isRework ? 1 : null,
       });
 
-      setSuccess(`Quick added ${status} (${status === 'STOP' ? stopHourValue : runHourValue}h) for ${formData.machineName}!`);
+      const hourValue = isStop ? stopHourValue : runHourValue;
+      const statusLabel = isRework
+        ? `REWORK (${formData.runStatus === '1' ? 'RUN' : 'STOP'})`
+        : status;
+      setSuccess(`Quick added ${statusLabel} (${hourValue}h) for ${formData.machineName}!`);
       await loadRecentEntries();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add data');
