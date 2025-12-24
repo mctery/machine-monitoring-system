@@ -260,6 +260,26 @@ const SimulationPage = () => {
             </div>
           )}
 
+          {/* Machine Select - First! */}
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              Machine Name <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="machineName"
+              value={formData.machineName}
+              onChange={handleChange}
+              className="w-full px-3 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            >
+              <option value="">Select Machine</option>
+              {machines.map(m => (
+                <option key={m.id} value={m.machineName}>
+                  {m.machineName} ({m.groupName})
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Quick Actions */}
           <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-750 rounded-xl border border-gray-200 dark:border-gray-600">
             <div className="flex items-center justify-between mb-3">
@@ -306,26 +326,6 @@ const SimulationPage = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Machine Select */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                Machine Name <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="machineName"
-                value={formData.machineName}
-                onChange={handleChange}
-                className="w-full px-3 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              >
-                <option value="">Select Machine</option>
-                {machines.map(m => (
-                  <option key={m.id} value={m.machineName}>
-                    {m.machineName} ({m.groupName})
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Log Time - Toggle between Current and Custom */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
