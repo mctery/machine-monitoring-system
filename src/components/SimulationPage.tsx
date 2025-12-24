@@ -258,16 +258,24 @@ const SimulationPage = () => {
           )}
 
           {/* Quick Actions */}
-          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Quick Add (Current Time)
-            </label>
-            <div className="flex gap-2">
+          <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-750 rounded-xl border border-gray-200 dark:border-gray-600">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Quick Add</span>
+              <button
+                type="button"
+                onClick={handleRandomize}
+                className="px-3 py-1.5 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-all hover:scale-105 flex items-center gap-1.5 shadow-sm"
+              >
+                <Shuffle className="w-3.5 h-3.5" />
+                Random
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => handleQuickAdd('RUN')}
                 disabled={isSubmitting || !formData.machineName}
-                className="flex-1 px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] shadow-md hover:shadow-lg text-lg"
               >
                 + RUN
               </button>
@@ -275,16 +283,9 @@ const SimulationPage = () => {
                 type="button"
                 onClick={() => handleQuickAdd('STOP')}
                 disabled={isSubmitting || !formData.machineName}
-                className="flex-1 px-4 py-2 bg-green-400 hover:bg-green-500 text-gray-900 font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-3 bg-green-400 hover:bg-green-500 text-gray-900 font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] shadow-md hover:shadow-lg text-lg"
               >
                 + STOP
-              </button>
-              <button
-                type="button"
-                onClick={handleRandomize}
-                className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-lg transition-colors flex items-center gap-1"
-              >
-                <Shuffle className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -292,14 +293,14 @@ const SimulationPage = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Machine Select */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Machine Name *
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                Machine Name <span className="text-red-500">*</span>
               </label>
               <select
                 name="machineName"
                 value={formData.machineName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2.5 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               >
                 <option value="">Select Machine</option>
                 {machines.map(m => (
@@ -312,47 +313,52 @@ const SimulationPage = () => {
 
             {/* Log Time - Toggle between Current and Custom */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
                   Log Time
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {useCustomTime ? 'Custom' : 'Current'}
+                <div
+                  className="flex items-center gap-2 cursor-pointer select-none"
+                  onClick={() => setUseCustomTime(!useCustomTime)}
+                >
+                  <span className={`text-xs font-medium transition-colors ${!useCustomTime ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>
+                    Current
                   </span>
                   <div
-                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                    className={`relative w-10 h-5 rounded-full transition-all ${
                       useCustomTime ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
-                    onClick={() => setUseCustomTime(!useCustomTime)}
                   >
                     <div
-                      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-md transition-transform ${
                         useCustomTime ? 'translate-x-5' : 'translate-x-0.5'
                       }`}
                     />
                   </div>
-                </label>
+                  <span className={`text-xs font-medium transition-colors ${useCustomTime ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>
+                    Custom
+                  </span>
+                </div>
               </div>
               {useCustomTime ? (
                 <input
                   type="datetime-local"
                   value={customTime}
                   onChange={(e) => setCustomTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border-2 border-blue-300 dark:border-blue-600 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               ) : (
-                <div className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="w-full px-3 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white flex items-center gap-2">
                   <Clock className="w-4 h-4 text-blue-500 animate-pulse" />
-                  <span className="font-mono">{formatDateTime(currentTime)}</span>
+                  <span className="font-mono text-sm">{formatDateTime(currentTime)}</span>
                 </div>
               )}
             </div>
 
             {/* Run/Stop/Warning Hours */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-1">
                   Run Hour
                 </label>
                 <input
@@ -362,11 +368,11 @@ const SimulationPage = () => {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border-2 border-yellow-300 dark:border-yellow-600 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-gray-900 dark:text-white focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-green-600 dark:text-green-400 mb-1">
                   Stop Hour
                 </label>
                 <input
@@ -376,11 +382,11 @@ const SimulationPage = () => {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border-2 border-green-300 dark:border-green-600 rounded-lg bg-green-50 dark:bg-green-900/20 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-orange-600 dark:text-orange-400 mb-1">
                   Warning Hour
                 </label>
                 <input
@@ -390,74 +396,77 @@ const SimulationPage = () => {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border-2 border-orange-300 dark:border-orange-600 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
               </div>
             </div>
 
-            {/* Run/Stop Status Switch */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Machine Status
-              </label>
-              <div className="flex items-center justify-center gap-4 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
-                <span className={`font-medium transition-colors ${formData.runStatus === '1' ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400'}`}>
-                  RUN
-                </span>
-                <div
-                  className={`relative w-14 h-7 rounded-full cursor-pointer transition-colors ${
-                    formData.runStatus === '1' ? 'bg-yellow-500' : 'bg-green-500'
-                  }`}
-                  onClick={() => {
-                    if (formData.runStatus === '1') {
-                      setFormData(prev => ({ ...prev, runStatus: '0', stopStatus: '1' }));
-                    } else {
-                      setFormData(prev => ({ ...prev, runStatus: '1', stopStatus: '0' }));
-                    }
-                  }}
-                >
+            {/* Status Switches - Combined Row */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Machine Status */}
+              <div className="p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center uppercase tracking-wide">
+                  Machine Status
+                </label>
+                <div className="flex items-center justify-center gap-2">
+                  <span className={`text-sm font-bold transition-colors ${formData.runStatus === '1' ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400'}`}>
+                    RUN
+                  </span>
                   <div
-                    className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                      formData.runStatus === '1' ? 'translate-x-1' : 'translate-x-8'
+                    className={`relative w-12 h-6 rounded-full cursor-pointer transition-all shadow-inner ${
+                      formData.runStatus === '1' ? 'bg-yellow-500' : 'bg-green-500'
                     }`}
-                  />
+                    onClick={() => {
+                      if (formData.runStatus === '1') {
+                        setFormData(prev => ({ ...prev, runStatus: '0', stopStatus: '1' }));
+                      } else {
+                        setFormData(prev => ({ ...prev, runStatus: '1', stopStatus: '0' }));
+                      }
+                    }}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${
+                        formData.runStatus === '1' ? 'translate-x-0.5' : 'translate-x-[1.625rem]'
+                      }`}
+                    />
+                  </div>
+                  <span className={`text-sm font-bold transition-colors ${formData.stopStatus === '1' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                    STOP
+                  </span>
                 </div>
-                <span className={`font-medium transition-colors ${formData.stopStatus === '1' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
-                  STOP
-                </span>
               </div>
-            </div>
 
-            {/* Rework Status Switch */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Rework Status
-              </label>
-              <div className="flex items-center justify-center gap-4 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
-                <span className={`font-medium transition-colors ${formData.reworkStatus !== '1' ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400'}`}>
-                  NO
-                </span>
-                <div
-                  className={`relative w-14 h-7 rounded-full cursor-pointer transition-colors ${
-                    formData.reworkStatus === '1' ? 'bg-red-500' : 'bg-gray-400'
-                  }`}
-                  onClick={() => {
-                    if (formData.reworkStatus === '1') {
-                      setFormData(prev => ({ ...prev, reworkStatus: '0' }));
-                    } else {
-                      setFormData(prev => ({ ...prev, reworkStatus: '1' }));
-                    }
-                  }}
-                >
+              {/* Rework Status */}
+              <div className="p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 text-center uppercase tracking-wide">
+                  Rework Status
+                </label>
+                <div className="flex items-center justify-center gap-2">
+                  <span className={`text-sm font-bold transition-colors ${formData.reworkStatus !== '1' ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400'}`}>
+                    NO
+                  </span>
                   <div
-                    className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                      formData.reworkStatus === '1' ? 'translate-x-8' : 'translate-x-1'
+                    className={`relative w-12 h-6 rounded-full cursor-pointer transition-all shadow-inner ${
+                      formData.reworkStatus === '1' ? 'bg-red-500' : 'bg-gray-400'
                     }`}
-                  />
+                    onClick={() => {
+                      if (formData.reworkStatus === '1') {
+                        setFormData(prev => ({ ...prev, reworkStatus: '0' }));
+                      } else {
+                        setFormData(prev => ({ ...prev, reworkStatus: '1' }));
+                      }
+                    }}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${
+                        formData.reworkStatus === '1' ? 'translate-x-[1.625rem]' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </div>
+                  <span className={`text-sm font-bold transition-colors ${formData.reworkStatus === '1' ? 'text-red-600 dark:text-red-400' : 'text-gray-400'}`}>
+                    REWORK
+                  </span>
                 </div>
-                <span className={`font-medium transition-colors ${formData.reworkStatus === '1' ? 'text-red-600 dark:text-red-400' : 'text-gray-400'}`}>
-                  REWORK
-                </span>
               </div>
             </div>
 
@@ -465,7 +474,7 @@ const SimulationPage = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.01] shadow-lg hover:shadow-xl flex items-center justify-center gap-2 mt-2"
             >
               {isSubmitting ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
