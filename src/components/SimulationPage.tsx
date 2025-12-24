@@ -280,24 +280,17 @@ const SimulationPage = () => {
         break;
     }
 
-    // Generate entries
+    // Generate entries (no limit)
     const entries: BatchEntry[] = [];
     let currentTime = from.getTime();
     const endTime = to.getTime();
 
-    // Limit to 1000 entries to prevent browser freeze
-    const maxEntries = 1000;
-    while (currentTime <= endTime && entries.length < maxEntries) {
+    while (currentTime <= endTime) {
       entries.push(generateRandomEntry(new Date(currentTime)));
       currentTime += intervalMs;
     }
 
-    if (entries.length >= maxEntries) {
-      setError(`Preview limited to ${maxEntries} entries. Adjust interval or date range.`);
-    } else {
-      setError(null);
-    }
-
+    setError(null);
     setBatchPreview(entries);
     setSuccess(`Generated ${entries.length} entries for preview`);
   };
