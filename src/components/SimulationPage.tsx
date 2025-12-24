@@ -117,7 +117,19 @@ const SimulationPage = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Auto-toggle: Run and Stop status are mutually exclusive
+    if (name === 'runStatus' && value === '1') {
+      setFormData(prev => ({ ...prev, runStatus: '1', stopStatus: '0' }));
+    } else if (name === 'stopStatus' && value === '1') {
+      setFormData(prev => ({ ...prev, runStatus: '0', stopStatus: '1' }));
+    } else if (name === 'runStatus' && value === '0') {
+      setFormData(prev => ({ ...prev, runStatus: '0', stopStatus: '1' }));
+    } else if (name === 'stopStatus' && value === '0') {
+      setFormData(prev => ({ ...prev, runStatus: '1', stopStatus: '0' }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
     setError(null);
     setSuccess(null);
   };
@@ -361,51 +373,54 @@ const SimulationPage = () => {
               </div>
             </div>
 
-            {/* Run/Stop Status */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Run Status
-                </label>
-                <select
-                  name="runStatus"
-                  value={formData.runStatus}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            {/* Run/Stop Status Switch */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Machine Status
+              </label>
+              <div className="flex items-center justify-center gap-4 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
+                <span className={`font-medium transition-colors ${formData.runStatus === '1' ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400'}`}>
+                  RUN
+                </span>
+                <div
+                  className={`relative w-14 h-7 rounded-full cursor-pointer transition-colors ${
+                    formData.runStatus === '1' ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}
+                  onClick={() => {
+                    if (formData.runStatus === '1') {
+                      setFormData(prev => ({ ...prev, runStatus: '0', stopStatus: '1' }));
+                    } else {
+                      setFormData(prev => ({ ...prev, runStatus: '1', stopStatus: '0' }));
+                    }
+                  }}
                 >
-                  <option value="0">0 - Not Running</option>
-                  <option value="1">1 - Running</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Stop Status
-                </label>
-                <select
-                  name="stopStatus"
-                  value={formData.stopStatus}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="0">0 - Not Stopped</option>
-                  <option value="1">1 - Stopped</option>
-                </select>
+                  <div
+                    className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      formData.runStatus === '1' ? 'translate-x-1' : 'translate-x-8'
+                    }`}
+                  />
+                </div>
+                <span className={`font-medium transition-colors ${formData.stopStatus === '1' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                  STOP
+                </span>
               </div>
             </div>
 
             {/* Rework Status */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Rework Status (Optional)
+                Rework Status
               </label>
-              <input
-                type="number"
+              <select
                 name="reworkStatus"
                 value={formData.reworkStatus}
                 onChange={handleChange}
-                placeholder="Leave empty for null"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              />
+              >
+                <option value="">- (null)</option>
+                <option value="0">0 - No Rework</option>
+                <option value="1">1 - Rework</option>
+              </select>
             </div>
 
             {/* Submit Button */}
