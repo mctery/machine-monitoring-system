@@ -33,7 +33,7 @@ const initialFormData: FormData = {
   warningHour: '0',
   runStatus: '1',
   stopStatus: '0',
-  reworkStatus: '',
+  reworkStatus: '0',
 };
 
 // Format date to display string with seconds
@@ -406,21 +406,37 @@ const SimulationPage = () => {
               </div>
             </div>
 
-            {/* Rework Status */}
+            {/* Rework Status Switch */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Rework Status
               </label>
-              <select
-                name="reworkStatus"
-                value={formData.reworkStatus}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">- (null)</option>
-                <option value="0">0 - No Rework</option>
-                <option value="1">1 - Rework</option>
-              </select>
+              <div className="flex items-center justify-center gap-4 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
+                <span className={`font-medium transition-colors ${formData.reworkStatus !== '1' ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400'}`}>
+                  NO
+                </span>
+                <div
+                  className={`relative w-14 h-7 rounded-full cursor-pointer transition-colors ${
+                    formData.reworkStatus === '1' ? 'bg-red-500' : 'bg-gray-400'
+                  }`}
+                  onClick={() => {
+                    if (formData.reworkStatus === '1') {
+                      setFormData(prev => ({ ...prev, reworkStatus: '0' }));
+                    } else {
+                      setFormData(prev => ({ ...prev, reworkStatus: '1' }));
+                    }
+                  }}
+                >
+                  <div
+                    className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      formData.reworkStatus === '1' ? 'translate-x-8' : 'translate-x-1'
+                    }`}
+                  />
+                </div>
+                <span className={`font-medium transition-colors ${formData.reworkStatus === '1' ? 'text-red-600 dark:text-red-400' : 'text-gray-400'}`}>
+                  REWORK
+                </span>
+              </div>
             </div>
 
             {/* Submit Button */}
