@@ -354,17 +354,17 @@ const SimulationPage = () => {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+    <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">
+      <div className="mb-4">
+        <h1 className="text-xl lg:text-2xl font-bold text-gray-800 dark:text-white">
           Simulation Machine Monitoring
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           Add test data to machine_hours table
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-4 lg:gap-6">
         {/* Form Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
