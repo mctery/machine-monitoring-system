@@ -1,10 +1,12 @@
 // src/components/TimelineViewer.tsx
 import { useEffect, useState, useCallback, memo, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { useMachineStore } from '../store/useMachineStore';
 import { getTimelineColor, getRatioCellClass } from '../utils/helpers';
 import { format } from 'date-fns';
 import { Calendar, Download, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { TimelineSegment, TimelineData } from '../types';
+import PageTransition, { fadeInUp, staggerContainer } from './PageTransition';
 
 // Memoized timeline segment component
 const TimelineSegmentBar = memo(({
@@ -138,11 +140,18 @@ const TimelineViewer = () => {
   const displayError = validationError || error;
 
   return (
-    <div className="h-full bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-6 transition-colors flex flex-col">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">Timeline Viewer</h1>
+    <PageTransition className="h-full bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-6 transition-colors flex flex-col">
+      <motion.div
+        initial="initial"
+        animate="animate"
+        variants={staggerContainer}
+      >
+        <motion.h1 variants={fadeInUp} className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">
+          Timeline Viewer
+        </motion.h1>
 
-      {/* Date Controls */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-6 shadow transition-colors">
+        {/* Date Controls */}
+        <motion.div variants={fadeInUp} className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-6 shadow transition-colors">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-300" aria-hidden="true" />
@@ -209,10 +218,10 @@ const TimelineViewer = () => {
             )}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Timeline Table */}
-      <div className="flex-1 overflow-auto">
+      <motion.div variants={fadeInUp} className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-64" role="status" aria-label="Loading timeline">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -254,8 +263,9 @@ const TimelineViewer = () => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+      </motion.div>
+    </PageTransition>
   );
 };
 

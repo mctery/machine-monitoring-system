@@ -1,7 +1,9 @@
 // src/components/SimulationPage.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, Loader2, AlertCircle, CheckCircle, Clock, Shuffle, Calendar, Play, Trash2, Eye } from 'lucide-react';
 import { machineHoursApi, machineSettingsApi, MachineSettingsData } from '../lib/api';
+import PageTransition, { fadeInUp, staggerContainer } from './PageTransition';
 
 interface FormData {
   logTime: string;
@@ -347,19 +349,24 @@ const SimulationPage = () => {
   }
 
   return (
-    <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">
-      <div className="mb-4">
-        <h1 className="text-xl lg:text-2xl font-bold text-gray-800 dark:text-white">
-          Simulation Machine Monitoring
-        </h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Add test data to machine_hours table
-        </p>
-      </div>
+    <PageTransition className="p-4 lg:p-6 max-w-[1600px] mx-auto">
+      <motion.div
+        initial="initial"
+        animate="animate"
+        variants={staggerContainer}
+      >
+        <motion.div variants={fadeInUp} className="mb-4">
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-800 dark:text-white">
+            Simulation Machine Monitoring
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Add test data to machine_hours table
+          </p>
+        </motion.div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-4 lg:gap-6">
-        {/* Form Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-4 lg:gap-6">
+          {/* Form Section */}
+          <motion.div variants={fadeInUp} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
             Add Machine Hours Data
           </h2>
@@ -617,10 +624,10 @@ const SimulationPage = () => {
               Add Data
             </button>
           </form>
-        </div>
+        </motion.div>
 
-        {/* Right Column */}
-        <div className="space-y-6">
+          {/* Right Column */}
+          <motion.div variants={fadeInUp} className="space-y-6">
           {/* Batch Insert Toggle */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-4">
@@ -854,9 +861,10 @@ const SimulationPage = () => {
             </div>
           )}
           </div>
+        </motion.div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </PageTransition>
   );
 };
 

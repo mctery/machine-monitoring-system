@@ -1,9 +1,11 @@
 // src/components/MachineSetup.tsx
 import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { ColumnDef } from '@tanstack/react-table';
 import { Settings, Plus, Save, X, Loader2, AlertCircle, Database, Trash2 } from 'lucide-react';
 import DataTable from './DataTable';
 import { machineSettingsApi, MachineSettingsData } from '../lib/api';
+import PageTransition, { fadeInUp, staggerContainer } from './PageTransition';
 
 // Editable Input Component (prevents focus loss)
 interface EditableInputProps {
@@ -588,16 +590,21 @@ const MachineSetup = () => {
   ], [editingId, editMachineName, editGroupName, editWeeklyTarget, editMonthlyTarget, availableGroups, isSubmitting, handleStartEdit, handleSaveEdit, handleCancelEdit, openDeleteDialog]);
 
   return (
-    <div className="h-full bg-gray-100 dark:bg-gray-900 p-6 transition-colors flex flex-col overflow-hidden">
-      <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex items-center justify-between mb-6 flex-shrink-0">
+    <PageTransition className="h-full bg-gray-100 dark:bg-gray-900 p-6 transition-colors flex flex-col overflow-hidden">
+      <motion.div
+        initial="initial"
+        animate="animate"
+        variants={staggerContainer}
+        className="flex flex-col flex-1 min-h-0"
+      >
+        <motion.div variants={fadeInUp} className="flex items-center justify-between mb-6 flex-shrink-0">
           <div className="flex items-center gap-3">
             <Settings className="w-8 h-8 text-gray-700 dark:text-gray-300" />
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">TMOT Machine Setup</h1>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-colors flex flex-col flex-1 min-h-0">
+        <motion.div variants={fadeInUp} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-colors flex flex-col flex-1 min-h-0">
           <div className="flex items-center justify-between mb-4 flex-shrink-0">
             <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">Target Ratio Setting</h2>
             <div className="flex gap-2">
@@ -673,8 +680,8 @@ const MachineSetup = () => {
               />
             </div>
           )}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Add Dialog */}
       <Dialog
@@ -699,7 +706,7 @@ const MachineSetup = () => {
         message={`Are you sure you want to delete "${selectedMachine?.machineName}"? This action cannot be undone.`}
         isLoading={isSubmitting}
       />
-    </div>
+    </PageTransition>
   );
 };
 

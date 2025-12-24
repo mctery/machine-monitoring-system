@@ -15,7 +15,8 @@
       "Bash(npx tsc --noEmit)",
       "Bash(grep:*)",
       "Bash(git push)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npm install framer-motion)"
     ]
   }
 }
