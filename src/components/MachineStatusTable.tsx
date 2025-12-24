@@ -9,7 +9,7 @@ import DataTable from './DataTable';
 import AnimatedCell from './AnimatedCell';
 import { AnimatePresence, staggerContent, staggerItem } from './PageTransition';
 
-const REFRESH_INTERVAL = 10000; // 10 seconds
+const REFRESH_INTERVAL = 5000; // 5 seconds
 
 // Helper functions for cell styling (with softer colors in dark mode)
 const getStateClass = (state: string) => {
@@ -278,7 +278,7 @@ const MachineStatusTable = () => {
               <div className="flex items-center gap-2">
                 <span>LAST UPDATED TIME : {lastUpdated}</span>
                 <span className="text-xs text-gray-400 dark:text-gray-500">
-                  (Auto-refresh: 10s)
+                  (Auto-refresh: 5s)
                 </span>
               </div>
               <span>Copyright &copy; 2023 Tire Mold (Thailand) Co., Ltd. (Bridgestone Group)</span>
