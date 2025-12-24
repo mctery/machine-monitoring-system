@@ -6,7 +6,7 @@ import { getTimelineColor, getRatioCellClass } from '../utils/helpers';
 import { format } from 'date-fns';
 import { Calendar, Download, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { TimelineSegment, TimelineData } from '../types';
-import PageTransition, { fadeInUp, staggerContainer } from './PageTransition';
+import PageTransition, { fadeInUp, staggerContainer, AnimatePresence, contentFadeIn } from './PageTransition';
 
 // Memoized timeline segment component
 const TimelineSegmentBar = memo(({
@@ -222,47 +222,72 @@ const TimelineViewer = () => {
 
       {/* Timeline Table */}
       <motion.div variants={fadeInUp} className="flex-1 overflow-auto">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64" role="status" aria-label="Loading timeline">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="sr-only">Loading...</span>
-          </div>
-        ) : timelineData.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center text-gray-500 dark:text-gray-400 shadow transition-colors">
-            No timeline data available for the selected date range.
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow transition-colors">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" role="table" aria-label="Machine timeline data">
-                <thead>
-                  <tr className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">
-                    <th scope="col" className="px-4 py-3 text-left border-r border-gray-300 dark:border-gray-600 sticky left-0 bg-gray-200 dark:bg-gray-700 z-10 min-w-[150px]">NAME</th>
-                    <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">RUN</th>
-                    <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">WARNING</th>
-                    <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">STOP</th>
-                    <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">ACTUAL<br />RATIO 1</th>
-                    <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">ACTUAL<br />RATIO 2</th>
-                    <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">TRUE<br />RATIO 1</th>
-                    <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">TRUE<br />RATIO 2</th>
-                    <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">WARNING<br />RATIO</th>
-                    <th scope="col" className="px-4 py-3 text-left min-w-[500px]">TIMELINE</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800">
-                  {groupedData.map(([groupName, items]) => (
-                    <>
-                      <GroupHeaderRow key={`group-${groupName}`} groupName={groupName} colSpan={10} />
-                      {items.map((item, index) => (
-                        <TimelineRow key={`${groupName}-${item.machineName || index}`} item={item} />
-                      ))}
-                    </>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center justify-center h-64"
+              role="status"
+              aria-label="Loading timeline"
+            >
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              <span className="sr-only">Loading...</span>
+            </motion.div>
+          ) : timelineData.length === 0 ? (
+            <motion.div
+              key="empty"
+              variants={contentFadeIn}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center text-gray-500 dark:text-gray-400 shadow transition-colors"
+            >
+              No timeline data available for the selected date range.
+            </motion.div>
+          ) : (
+            <motion.div
+              key="content"
+              variants={contentFadeIn}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow transition-colors"
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" role="table" aria-label="Machine timeline data">
+                  <thead>
+                    <tr className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">
+                      <th scope="col" className="px-4 py-3 text-left border-r border-gray-300 dark:border-gray-600 sticky left-0 bg-gray-200 dark:bg-gray-700 z-10 min-w-[150px]">NAME</th>
+                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">RUN</th>
+                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">WARNING</th>
+                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">STOP</th>
+                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">ACTUAL<br />RATIO 1</th>
+                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">ACTUAL<br />RATIO 2</th>
+                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">TRUE<br />RATIO 1</th>
+                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">TRUE<br />RATIO 2</th>
+                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">WARNING<br />RATIO</th>
+                      <th scope="col" className="px-4 py-3 text-left min-w-[500px]">TIMELINE</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800">
+                    {groupedData.map(([groupName, items]) => (
+                      <>
+                        <GroupHeaderRow key={`group-${groupName}`} groupName={groupName} colSpan={10} />
+                        {items.map((item, index) => (
+                          <TimelineRow key={`${groupName}-${item.machineName || index}`} item={item} />
+                        ))}
+                      </>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
       </motion.div>
     </PageTransition>

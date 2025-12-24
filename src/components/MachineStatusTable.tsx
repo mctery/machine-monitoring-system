@@ -1,10 +1,12 @@
 // src/components/MachineStatusTable.tsx
 import { useEffect, memo, useMemo, useState, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { ColumnDef, CellContext } from '@tanstack/react-table';
 import { useMachineStore } from '../store/useMachineStore';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Machine } from '../types';
 import DataTable from './DataTable';
+import { AnimatePresence, staggerContent, staggerItem } from './PageTransition';
 
 const REFRESH_INTERVAL = 10000; // 10 seconds
 
@@ -180,50 +182,75 @@ const MachineStatusTable = () => {
     );
   }
 
-  // Only show full-screen loader on initial load
-  if (isInitialLoad && machines.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
   return (
     <div className="h-full flex flex-col">
-      {/* Two-column grid layout - scrollable */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* Left Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-auto">
-          <DataTable
-            data={leftMachines}
-            columns={machineColumns}
-            enableSorting={true}
-            stickyHeader={true}
-          />
-        </div>
+      <AnimatePresence mode="wait">
+        {/* Only show full-screen loader on initial load */}
+        {isInitialLoad && machines.length === 0 ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex items-center justify-center h-64"
+          >
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            variants={staggerContent}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="flex-1 min-h-0 flex flex-col"
+          >
+            {/* Two-column grid layout - scrollable */}
+            <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {/* Left Table */}
+              <motion.div
+                variants={staggerItem}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-auto"
+              >
+                <DataTable
+                  data={leftMachines}
+                  columns={machineColumns}
+                  enableSorting={true}
+                  stickyHeader={true}
+                />
+              </motion.div>
 
-        {/* Right Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-auto">
-          <DataTable
-            data={rightMachines}
-            columns={machineColumns}
-            enableSorting={true}
-            stickyHeader={true}
-          />
-        </div>
-      </div>
+              {/* Right Table */}
+              <motion.div
+                variants={staggerItem}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-auto"
+              >
+                <DataTable
+                  data={rightMachines}
+                  columns={machineColumns}
+                  enableSorting={true}
+                  stickyHeader={true}
+                />
+              </motion.div>
+            </div>
 
-      {/* Footer - Fixed at bottom */}
-      <div className="flex-shrink-0 pt-3 pb-1 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
-        <div className="flex items-center gap-2">
-          <span>LAST UPDATED TIME : {lastUpdated}</span>
-          <span className="text-xs text-gray-400 dark:text-gray-500">
-            (Auto-refresh: 10s)
-          </span>
-        </div>
-        <span>Copyright &copy; 2023 Tire Mold (Thailand) Co., Ltd. (Bridgestone Group)</span>
-      </div>
+            {/* Footer - Fixed at bottom */}
+            <motion.div
+              variants={staggerItem}
+              className="flex-shrink-0 pt-3 pb-1 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400"
+            >
+              <div className="flex items-center gap-2">
+                <span>LAST UPDATED TIME : {lastUpdated}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  (Auto-refresh: 10s)
+                </span>
+              </div>
+              <span>Copyright &copy; 2023 Tire Mold (Thailand) Co., Ltd. (Bridgestone Group)</span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

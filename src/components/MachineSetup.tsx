@@ -5,7 +5,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Settings, Plus, Save, X, Loader2, AlertCircle, Database, Trash2 } from 'lucide-react';
 import DataTable from './DataTable';
 import { machineSettingsApi, MachineSettingsData } from '../lib/api';
-import PageTransition, { fadeInUp, staggerContainer } from './PageTransition';
+import PageTransition, { fadeInUp, staggerContainer, AnimatePresence, contentFadeIn } from './PageTransition';
 
 // Editable Input Component (prevents focus loss)
 interface EditableInputProps {
@@ -657,29 +657,52 @@ const MachineSetup = () => {
           </div>
 
           {/* Table */}
-          {isLoading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            </div>
-          ) : filteredSettings.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-              <Database className="w-12 h-12 mb-2" />
-              <p>No machines found.</p>
-              {settings.length === 0 && (
-                <p className="text-sm mt-1">Click "Initialize Data" to add sample machines.</p>
-              )}
-            </div>
-          ) : (
-            <div className="flex-1 overflow-auto min-h-0">
-              <DataTable
-                data={filteredSettings}
-                columns={columns}
-                enableSorting={true}
-                stickyHeader={true}
-                headerClassName="bg-green-600 dark:bg-green-700 text-white"
-              />
-            </div>
-          )}
+          <AnimatePresence mode="wait">
+            {isLoading ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 flex items-center justify-center"
+              >
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              </motion.div>
+            ) : filteredSettings.length === 0 ? (
+              <motion.div
+                key="empty"
+                variants={contentFadeIn}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="flex-1 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400"
+              >
+                <Database className="w-12 h-12 mb-2" />
+                <p>No machines found.</p>
+                {settings.length === 0 && (
+                  <p className="text-sm mt-1">Click "Initialize Data" to add sample machines.</p>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="content"
+                variants={contentFadeIn}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="flex-1 overflow-auto min-h-0"
+              >
+                <DataTable
+                  data={filteredSettings}
+                  columns={columns}
+                  enableSorting={true}
+                  stickyHeader={true}
+                  headerClassName="bg-green-600 dark:bg-green-700 text-white"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </motion.div>
 

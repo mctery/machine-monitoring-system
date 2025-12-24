@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Loader2, AlertCircle, CheckCircle, Clock, Shuffle, Calendar, Play, Trash2, Eye } from 'lucide-react';
 import { machineHoursApi, machineSettingsApi, MachineSettingsData } from '../lib/api';
-import PageTransition, { fadeInUp, staggerContainer } from './PageTransition';
+import PageTransition, { fadeInUp, staggerContainer, AnimatePresence } from './PageTransition';
 
 interface FormData {
   logTime: string;
@@ -340,33 +340,39 @@ const SimulationPage = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
   return (
     <PageTransition className="p-4 lg:p-6 max-w-[1600px] mx-auto">
-      <motion.div
-        initial="initial"
-        animate="animate"
-        variants={staggerContainer}
-      >
-        <motion.div variants={fadeInUp} className="mb-4">
-          <h1 className="text-xl lg:text-2xl font-bold text-gray-800 dark:text-white">
-            Simulation Machine Monitoring
-          </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Add test data to machine_hours table
-          </p>
-        </motion.div>
+      <AnimatePresence mode="wait">
+        {isLoading ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex items-center justify-center h-64"
+          >
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            initial="initial"
+            animate="animate"
+            variants={staggerContainer}
+          >
+            <motion.div variants={fadeInUp} className="mb-4">
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-800 dark:text-white">
+                Simulation Machine Monitoring
+              </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Add test data to machine_hours table
+              </p>
+            </motion.div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-4 lg:gap-6">
-          {/* Form Section */}
-          <motion.div variants={fadeInUp} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-4 lg:gap-6">
+              {/* Form Section */}
+              <motion.div variants={fadeInUp} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
             Add Machine Hours Data
           </h2>
@@ -862,8 +868,10 @@ const SimulationPage = () => {
           )}
           </div>
         </motion.div>
-        </div>
-      </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </PageTransition>
   );
 };
