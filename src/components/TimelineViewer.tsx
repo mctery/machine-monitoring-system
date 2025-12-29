@@ -88,8 +88,10 @@ GroupHeaderRow.displayName = 'GroupHeaderRow';
 
 const TimelineViewer = () => {
   const { timelineData, dateRange, setDateRange, loadTimelineData, exportToCSV, isLoading, error, clearError } = useMachineStore();
-  const [fromDate, setFromDate] = useState(format(dateRange.from, "yyyy-MM-dd'T'HH:mm"));
-  const [toDate, setToDate] = useState(format(dateRange.to, "yyyy-MM-dd'T'HH:mm"));
+  const [fromDateStr, setFromDateStr] = useState(format(dateRange.from, "yyyy-MM-dd"));
+  const [fromTimeStr, setFromTimeStr] = useState(format(dateRange.from, "HH:mm"));
+  const [toDateStr, setToDateStr] = useState(format(dateRange.to, "yyyy-MM-dd"));
+  const [toTimeStr, setToTimeStr] = useState(format(dateRange.to, "HH:mm"));
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -111,8 +113,8 @@ const TimelineViewer = () => {
   }, [timelineData]);
 
   const handleUpdate = useCallback(() => {
-    const from = new Date(fromDate);
-    const to = new Date(toDate);
+    const from = new Date(`${fromDateStr}T${fromTimeStr}:00`);
+    const to = new Date(`${toDateStr}T${toTimeStr}:59`);
 
     // Validate dates
     if (isNaN(from.getTime()) || isNaN(to.getTime())) {
@@ -130,7 +132,7 @@ const TimelineViewer = () => {
     if (success) {
       loadTimelineData();
     }
-  }, [fromDate, toDate, setDateRange, loadTimelineData]);
+  }, [fromDateStr, fromTimeStr, toDateStr, toTimeStr, setDateRange, loadTimelineData]);
 
   const handleRetry = useCallback(() => {
     clearError();
@@ -173,8 +175,10 @@ const TimelineViewer = () => {
         break;
     }
 
-    setFromDate(format(from, "yyyy-MM-dd'T'HH:mm"));
-    setToDate(format(to, "yyyy-MM-dd'T'HH:mm"));
+    setFromDateStr(format(from, "yyyy-MM-dd"));
+    setFromTimeStr(format(from, "HH:mm"));
+    setToDateStr(format(to, "yyyy-MM-dd"));
+    setToTimeStr(format(to, "HH:mm"));
     setValidationError(null);
     const success = setDateRange({ from, to });
     if (success) {
@@ -245,15 +249,24 @@ const TimelineViewer = () => {
             <label htmlFor="from-date" className="text-sm font-medium text-gray-700 dark:text-gray-200">From:</label>
             <input
               id="from-date"
-              type="datetime-local"
-              value={fromDate}
-              max={toDate}
+              type="date"
+              value={fromDateStr}
               onChange={(e) => {
-                setFromDate(e.target.value);
+                setFromDateStr(e.target.value);
                 setValidationError(null);
               }}
               className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white"
               aria-describedby={validationError ? "date-error" : undefined}
+            />
+            <input
+              id="from-time"
+              type="time"
+              value={fromTimeStr}
+              onChange={(e) => {
+                setFromTimeStr(e.target.value);
+                setValidationError(null);
+              }}
+              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-24"
             />
           </div>
 
@@ -261,15 +274,24 @@ const TimelineViewer = () => {
             <label htmlFor="to-date" className="text-sm font-medium text-gray-700 dark:text-gray-200">To:</label>
             <input
               id="to-date"
-              type="datetime-local"
-              value={toDate}
-              min={fromDate}
+              type="date"
+              value={toDateStr}
               onChange={(e) => {
-                setToDate(e.target.value);
+                setToDateStr(e.target.value);
                 setValidationError(null);
               }}
               className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white"
               aria-describedby={validationError ? "date-error" : undefined}
+            />
+            <input
+              id="to-time"
+              type="time"
+              value={toTimeStr}
+              onChange={(e) => {
+                setToTimeStr(e.target.value);
+                setValidationError(null);
+              }}
+              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-24"
             />
           </div>
 
