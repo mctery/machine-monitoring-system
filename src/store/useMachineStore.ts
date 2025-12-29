@@ -57,6 +57,9 @@ const buildTimelineSegments = (
     }
   }
 
+  // Sort by start time
+  timeline.sort((a, b) => a.start.getTime() - b.start.getTime());
+
   return timeline;
 };
 
