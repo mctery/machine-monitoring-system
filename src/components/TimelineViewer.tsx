@@ -137,6 +137,51 @@ const TimelineViewer = () => {
     loadTimelineData();
   }, [clearError, loadTimelineData]);
 
+  // Preset date range handlers
+  const setPresetRange = useCallback((preset: 'today' | 'yesterday' | 'thisWeek' | 'last7Days' | 'thisMonth' | 'last30Days') => {
+    const now = new Date();
+    let from: Date;
+    let to: Date;
+
+    switch (preset) {
+      case 'today':
+        from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      case 'yesterday':
+        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
+        break;
+      case 'thisWeek': {
+        const dayOfWeek = now.getDay();
+        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday, 0, 0, 0);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      }
+      case 'last7Days':
+        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      case 'thisMonth':
+        from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      case 'last30Days':
+        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29, 0, 0, 0);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+    }
+
+    setFromDate(format(from, "yyyy-MM-dd'T'HH:mm"));
+    setToDate(format(to, "yyyy-MM-dd'T'HH:mm"));
+    setValidationError(null);
+    const success = setDateRange({ from, to });
+    if (success) {
+      loadTimelineData();
+    }
+  }, [setDateRange, loadTimelineData]);
+
   const displayError = validationError || error;
 
   return (
@@ -152,6 +197,48 @@ const TimelineViewer = () => {
 
         {/* Date Controls */}
         <motion.div variants={fadeInUp} className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-6 shadow transition-colors">
+        {/* Quick Presets */}
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <span className="text-sm text-gray-500 dark:text-gray-400 mr-1">Quick:</span>
+          <button
+            onClick={() => setPresetRange('today')}
+            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
+          >
+            Today
+          </button>
+          <button
+            onClick={() => setPresetRange('yesterday')}
+            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
+          >
+            Yesterday
+          </button>
+          <button
+            onClick={() => setPresetRange('thisWeek')}
+            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
+          >
+            This Week
+          </button>
+          <button
+            onClick={() => setPresetRange('last7Days')}
+            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
+          >
+            Last 7 Days
+          </button>
+          <button
+            onClick={() => setPresetRange('thisMonth')}
+            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
+          >
+            This Month
+          </button>
+          <button
+            onClick={() => setPresetRange('last30Days')}
+            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
+          >
+            Last 30 Days
+          </button>
+        </div>
+
+        {/* Custom Date Range */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-300" aria-hidden="true" />
