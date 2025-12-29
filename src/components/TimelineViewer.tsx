@@ -15,15 +15,21 @@ const TimelineSegmentBar = memo(({
 }: {
   segment: TimelineSegment;
   widthPercent: number;
-}) => (
-  <div
-    className={`${getTimelineColor(segment.state)} border-r border-gray-400 dark:border-gray-800 hover:opacity-80 transition-opacity cursor-pointer`}
-    style={{ width: `${widthPercent}%` }}
-    title={`${segment.state}: ${segment.duration.toFixed(1)} hours`}
-    role="img"
-    aria-label={`${segment.state} for ${segment.duration.toFixed(1)} hours`}
-  />
-));
+}) => {
+  const startStr = format(segment.start, 'dd/MM/yyyy HH:mm');
+  const endStr = format(segment.end, 'dd/MM/yyyy HH:mm');
+  const tooltip = `${segment.state}: ${segment.duration.toFixed(1)} hrs\n${startStr} - ${endStr}`;
+
+  return (
+    <div
+      className={`${getTimelineColor(segment.state)} border-r border-gray-400 dark:border-gray-800 hover:opacity-80 transition-opacity cursor-pointer`}
+      style={{ width: `${widthPercent}%` }}
+      title={tooltip}
+      role="img"
+      aria-label={`${segment.state} for ${segment.duration.toFixed(1)} hours from ${startStr} to ${endStr}`}
+    />
+  );
+});
 
 TimelineSegmentBar.displayName = 'TimelineSegmentBar';
 
@@ -89,9 +95,9 @@ GroupHeaderRow.displayName = 'GroupHeaderRow';
 const TimelineViewer = () => {
   const { timelineData, dateRange, setDateRange, loadTimelineData, exportToCSV, isLoading, error, clearError } = useMachineStore();
   const [fromDateStr, setFromDateStr] = useState(format(dateRange.from, "yyyy-MM-dd"));
-  const [fromTimeStr, setFromTimeStr] = useState(format(dateRange.from, "HH:mm"));
+  const [fromTimeStr, setFromTimeStr] = useState(format(dateRange.from, "HH") + ":00");
   const [toDateStr, setToDateStr] = useState(format(dateRange.to, "yyyy-MM-dd"));
-  const [toTimeStr, setToTimeStr] = useState(format(dateRange.to, "HH:mm"));
+  const [toTimeStr, setToTimeStr] = useState(format(dateRange.to, "HH") + ":00");
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -114,7 +120,7 @@ const TimelineViewer = () => {
 
   const handleUpdate = useCallback(() => {
     const from = new Date(`${fromDateStr}T${fromTimeStr}:00`);
-    const to = new Date(`${toDateStr}T${toTimeStr}:59`);
+    const to = new Date(`${toDateStr}T${toTimeStr}:59`); // Add 59 seconds to include the full hour
 
     // Validate dates
     if (isNaN(from.getTime()) || isNaN(to.getTime())) {
@@ -176,9 +182,9 @@ const TimelineViewer = () => {
     }
 
     setFromDateStr(format(from, "yyyy-MM-dd"));
-    setFromTimeStr(format(from, "HH:mm"));
+    setFromTimeStr(format(from, "HH") + ":00");
     setToDateStr(format(to, "yyyy-MM-dd"));
-    setToTimeStr(format(to, "HH:mm"));
+    setToTimeStr(format(to, "HH") + ":00");
     setValidationError(null);
     const success = setDateRange({ from, to });
     if (success) {
@@ -255,19 +261,23 @@ const TimelineViewer = () => {
                 setFromDateStr(e.target.value);
                 setValidationError(null);
               }}
-              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white"
+              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-32"
               aria-describedby={validationError ? "date-error" : undefined}
             />
-            <input
+            <select
               id="from-time"
-              type="time"
               value={fromTimeStr}
               onChange={(e) => {
                 setFromTimeStr(e.target.value);
                 setValidationError(null);
               }}
               className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-24"
-            />
+            >
+              {Array.from({ length: 24 }, (_, i) => {
+                const hour = i.toString().padStart(2, '0');
+                return <option key={hour} value={`${hour}:00`}>{hour}:00</option>;
+              })}
+            </select>
           </div>
 
           <div className="flex items-center gap-2">
@@ -280,19 +290,23 @@ const TimelineViewer = () => {
                 setToDateStr(e.target.value);
                 setValidationError(null);
               }}
-              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white"
+              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-32"
               aria-describedby={validationError ? "date-error" : undefined}
             />
-            <input
+            <select
               id="to-time"
-              type="time"
               value={toTimeStr}
               onChange={(e) => {
                 setToTimeStr(e.target.value);
                 setValidationError(null);
               }}
               className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-24"
-            />
+            >
+              {Array.from({ length: 24 }, (_, i) => {
+                const hour = i.toString().padStart(2, '0');
+                return <option key={hour} value={`${hour}:00`}>{hour}:00</option>;
+              })}
+            </select>
           </div>
 
           <button

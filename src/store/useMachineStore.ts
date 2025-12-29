@@ -23,42 +23,37 @@ const buildTimelineSegments = (
   segments: TimelineSegmentData[],
   machineName: string
 ): TimelineSegment[] => {
-  const machineSegments = segments.filter(s => s.machineName === machineName);
-  const timeline: TimelineSegment[] = [];
+  const machineSegments = segments
+    .filter(s => s.machineName === machineName)
+    .sort((a, b) => new Date(a.logTime).getTime() - new Date(b.logTime).getTime());
 
-  for (const segment of machineSegments) {
+  const timeline: TimelineSegment[] = [];
+  const INTERVAL_MS = 10 * 60 * 1000; // 10 minutes default interval
+
+  for (let i = 0; i < machineSegments.length; i++) {
+    const segment = machineSegments[i];
     const logTime = new Date(segment.logTime);
 
-    // Add RUN or REWORK segment if runHour > 0
-    // If reworkStatus === 1, show as REWORK instead of RUN
-    if (segment.runHour > 0) {
-      const runDuration = segment.runHour;
-      const state = segment.reworkStatus === 1 ? 'REWORK' : 'RUN';
-      timeline.push({
-        start: logTime,
-        end: new Date(logTime.getTime() + runDuration * 60 * 60 * 1000),
-        state,
-        duration: runDuration
-      });
-    }
+    // Calculate end time: use next record's logTime or add 10 minutes for the last record
+    const nextLogTime = i < machineSegments.length - 1
+      ? new Date(machineSegments[i + 1].logTime)
+      : new Date(logTime.getTime() + INTERVAL_MS);
 
-    // Add STOP segment if stopHour > 0
-    if (segment.stopHour > 0) {
-      const stopStart = segment.runHour > 0
-        ? new Date(logTime.getTime() + segment.runHour * 60 * 60 * 1000)
-        : logTime;
-      const stopDuration = segment.stopHour;
-      timeline.push({
-        start: stopStart,
-        end: new Date(stopStart.getTime() + stopDuration * 60 * 60 * 1000),
-        state: 'STOP',
-        duration: stopDuration
-      });
-    }
+    // Duration in hours based on actual time difference
+    const durationHours = (nextLogTime.getTime() - logTime.getTime()) / (60 * 60 * 1000);
+
+    // Determine state based on run_status/stop_status
+    const state: 'RUN' | 'STOP' | 'REWORK' = segment.runStatus === 1
+      ? (segment.reworkStatus === 1 ? 'REWORK' : 'RUN')
+      : 'STOP';
+
+    timeline.push({
+      start: logTime,
+      end: nextLogTime,
+      state,
+      duration: durationHours
+    });
   }
-
-  // Sort by start time
-  timeline.sort((a, b) => a.start.getTime() - b.start.getTime());
 
   return timeline;
 };
@@ -149,6 +144,51 @@ const isValidDateRange = (from: Date, to: Date): boolean => {
   return from instanceof Date && to instanceof Date && !isNaN(from.getTime()) && !isNaN(to.getTime()) && from <= to;
 };
 
+// LocalStorage key for date range
+const DATE_RANGE_STORAGE_KEY = 'timeline-date-range';
+
+// Helper to save date range to localStorage
+const saveDateRangeToStorage = (range: DateRange): void => {
+  try {
+    localStorage.setItem(DATE_RANGE_STORAGE_KEY, JSON.stringify({
+      from: range.from.toISOString(),
+      to: range.to.toISOString()
+    }));
+  } catch (error) {
+    console.error('Failed to save date range to localStorage:', error);
+  }
+};
+
+// Helper to load date range from localStorage
+const loadDateRangeFromStorage = (): DateRange | null => {
+  try {
+    const stored = localStorage.getItem(DATE_RANGE_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const from = new Date(parsed.from);
+      const to = new Date(parsed.to);
+      if (isValidDateRange(from, to)) {
+        return { from, to };
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load date range from localStorage:', error);
+  }
+  return null;
+};
+
+// Get initial date range (from localStorage or default to today)
+const getInitialDateRange = (): DateRange => {
+  const stored = loadDateRangeFromStorage();
+  if (stored) {
+    return stored;
+  }
+  return {
+    from: new Date(new Date().setHours(0, 0, 0, 0)),
+    to: new Date(new Date().setHours(23, 59, 59, 999))
+  };
+};
+
 // Helper to escape CSV values
 const escapeCSVValue = (value: string | number): string => {
   const str = String(value);
@@ -163,10 +203,7 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
   timelineData: [],
   availableGroups: [],
   selectedGroup: 'ALL',
-  dateRange: {
-    from: new Date(new Date().setHours(0, 0, 0, 0)),
-    to: new Date(new Date().setHours(23, 59, 59, 999))
-  },
+  dateRange: getInitialDateRange(),
   isLoading: false,
   error: null,
 
@@ -177,6 +214,7 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
       set({ error: 'Invalid date range: "From" date must be before "To" date' });
       return false;
     }
+    saveDateRangeToStorage(range);
     set({ dateRange: range, error: null });
     return true;
   },
