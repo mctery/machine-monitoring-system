@@ -39,19 +39,27 @@ const buildTimelineSegments = (
       ? new Date(machineSegments[i + 1].logTime)
       : new Date(logTime.getTime() + INTERVAL_MS);
 
-    // Duration in hours based on actual time difference
-    const durationHours = (nextLogTime.getTime() - logTime.getTime()) / (60 * 60 * 1000);
-
     // Determine state based on run_status/stop_status
     const state: 'RUN' | 'STOP' | 'REWORK' = segment.runStatus === 1
       ? (segment.reworkStatus === 1 ? 'REWORK' : 'RUN')
       : 'STOP';
 
+    // Get duration from actual database values based on state
+    let duration: number;
+    if (state === 'RUN') {
+      duration = segment.runHour || 0;
+    } else if (state === 'STOP') {
+      duration = segment.stopHour || 0;
+    } else {
+      // REWORK: use whichever has data
+      duration = segment.runHour || segment.stopHour || 0;
+    }
+
     timeline.push({
       start: logTime,
       end: nextLogTime,
       state,
-      duration: durationHours
+      duration
     });
   }
 

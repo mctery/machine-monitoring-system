@@ -261,7 +261,7 @@ const TimelineViewer = () => {
                 setFromDateStr(e.target.value);
                 setValidationError(null);
               }}
-              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-32"
+              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-36"
               aria-describedby={validationError ? "date-error" : undefined}
             />
             <select
@@ -281,6 +281,7 @@ const TimelineViewer = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-300" aria-hidden="true" />
             <label htmlFor="to-date" className="text-sm font-medium text-gray-700 dark:text-gray-200">To:</label>
             <input
               id="to-date"
@@ -290,7 +291,7 @@ const TimelineViewer = () => {
                 setToDateStr(e.target.value);
                 setValidationError(null);
               }}
-              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-32"
+              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-36"
               aria-describedby={validationError ? "date-error" : undefined}
             />
             <select
