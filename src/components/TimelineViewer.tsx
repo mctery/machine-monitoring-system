@@ -1,5 +1,5 @@
 // src/components/TimelineViewer.tsx
-import { useEffect, useState, useCallback, memo, useMemo } from 'react';
+import { useEffect, useState, useCallback, memo, useMemo, Fragment } from 'react';
 import { motion } from 'framer-motion';
 import { useMachineStore } from '../store/useMachineStore';
 import { getTimelineColor, getRatioCellClass } from '../utils/helpers';
@@ -275,12 +275,12 @@ const TimelineViewer = () => {
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800">
                     {groupedData.map(([groupName, items]) => (
-                      <>
-                        <GroupHeaderRow key={`group-${groupName}`} groupName={groupName} colSpan={10} />
+                      <Fragment key={groupName}>
+                        <GroupHeaderRow groupName={groupName} colSpan={10} />
                         {items.map((item, index) => (
                           <TimelineRow key={`${groupName}-${item.machineName || index}`} item={item} />
                         ))}
-                      </>
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>

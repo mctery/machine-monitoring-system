@@ -72,11 +72,32 @@ const mapToTimelineData = (
   const groupAvg = groupAverages.get(data.groupName) || { avgActualRatio1: 0, avgTrueRatio1: 0 };
 
   // Build timeline from actual segments data
-  const timeline = buildTimelineSegments(segments, data.machineName);
+  let timeline = buildTimelineSegments(segments, data.machineName);
 
-  // Calculate total run and stop from timeline
-  const totalRun = timeline.filter(t => t.state === 'RUN').reduce((sum, t) => sum + t.duration, 0);
-  const totalStop = timeline.filter(t => t.state === 'STOP').reduce((sum, t) => sum + t.duration, 0);
+  // Use aggregated RUN/STOP values from API
+  const totalRun = data.runHour || 0;
+  const totalStop = data.stopHour || 0;
+
+  // If no detailed segments available, create a simple proportional timeline
+  if (timeline.length === 0 && (totalRun > 0 || totalStop > 0)) {
+    const now = new Date();
+    if (totalRun > 0) {
+      timeline.push({
+        start: now,
+        end: now,
+        state: 'RUN',
+        duration: totalRun
+      });
+    }
+    if (totalStop > 0) {
+      timeline.push({
+        start: now,
+        end: now,
+        state: 'STOP',
+        duration: totalStop
+      });
+    }
+  }
 
   // Calculate Ratio 2 values (Group averages)
   const actualRatio2 = groupAvg.avgActualRatio1; // Group average of Actual Ratio 1
@@ -236,24 +257,26 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
   },
 
   exportToCSV: () => {
-    const { machines } = get();
+    const { timelineData } = get();
 
-    if (machines.length === 0) {
+    if (timelineData.length === 0) {
       set({ error: 'No data to export' });
       return;
     }
 
     try {
-      const headers = ['Group', 'Machine Name', 'State', 'Stop Hours', 'Weekly Actual', 'Weekly Target', 'Monthly Actual', 'Monthly Target'];
-      const rows = machines.map(m => [
-        escapeCSVValue(m.group),
-        escapeCSVValue(m.machineName),
-        escapeCSVValue(m.state),
-        escapeCSVValue(m.stopHours.toFixed(2)),
-        escapeCSVValue(m.weeklyActualRatio.toFixed(2)),
-        escapeCSVValue(m.weeklyTargetRatio),
-        escapeCSVValue(m.monthlyActualRatio.toFixed(2)),
-        escapeCSVValue(m.monthlyTargetRatio)
+      const headers = ['Group', 'Machine Name', 'RUN', 'WARNING', 'STOP', 'Actual Ratio 1', 'Actual Ratio 2', 'True Ratio 1', 'True Ratio 2', 'Warning Ratio'];
+      const rows = timelineData.map(t => [
+        escapeCSVValue(t.groupName),
+        escapeCSVValue(t.machineName),
+        escapeCSVValue(t.run.toFixed(2)),
+        escapeCSVValue(t.warning),
+        escapeCSVValue(t.stop.toFixed(2)),
+        escapeCSVValue(t.actualRatio1.toFixed(2)),
+        escapeCSVValue(t.actualRatio2.toFixed(2)),
+        escapeCSVValue(t.trueRatio1.toFixed(2)),
+        escapeCSVValue(t.trueRatio2.toFixed(2)),
+        escapeCSVValue(t.warningRatio)
       ]);
 
       // Add BOM for UTF-8 support
@@ -263,7 +286,7 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `machine-data-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `timeline-data-${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
