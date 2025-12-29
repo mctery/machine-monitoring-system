@@ -19,7 +19,7 @@ const TimelineSegmentBar = memo(({
   <div
     className={`${getTimelineColor(segment.state)} border-r border-gray-400 dark:border-gray-800 hover:opacity-80 transition-opacity cursor-pointer`}
     style={{ width: `${widthPercent}%` }}
-    title={`${segment.state}\n${format(segment.start, 'dd/MM/yyyy HH:mm')} - ${format(segment.end, 'dd/MM/yyyy HH:mm')}`}
+    title={`${segment.state}: ${segment.duration.toFixed(1)} hours`}
     role="img"
     aria-label={`${segment.state} for ${segment.duration.toFixed(1)} hours`}
   />
