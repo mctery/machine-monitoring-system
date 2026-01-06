@@ -216,7 +216,7 @@ npm run dev
 |--------|----------|
 | `npm run dev` | รัน Vite dev server (Frontend only) |
 | `npm run dev:vercel` | รัน Vercel dev (Frontend + API) |
-| `npm run build` | Build สำหรับ production |
+| `npm run build` | Build สำหรับ production (รวม Prisma generate) |
 | `npm run preview` | Preview production build |
 | `npm run start` | รัน Express production server |
 | `npm run start:pm2` | รันผ่าน PM2 |
@@ -248,7 +248,7 @@ vercel
 #### รันแบบ Manual
 
 ```bash
-# Build frontend
+# Build (Prisma generate + TypeScript + Vite)
 npm run build
 
 # รัน server
