@@ -1,6 +1,6 @@
 # TMOT Machine Monitoring System
 
-Real-time machine monitoring dashboard for tracking machine status and performance at True Mold (Thailand) Co., Ltd. (Bridgestone Group)
+ระบบติดตามสถานะเครื่องจักรแบบ Real-time สำหรับ True Mold (Thailand) Co., Ltd. (Bridgestone Group)
 
 **Live Demo:** https://machine-monitoring-system.vercel.app
 
@@ -11,132 +11,305 @@ Real-time machine monitoring dashboard for tracking machine status and performan
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange)
 ![Vercel](https://img.shields.io/badge/Vercel-Deployed-black)
 
-## Features
+---
 
-### Machine Status Dashboard
-- Real-time machine status monitoring (STOP/RUN)
-- Color-coded status and performance indicators
-- STOP hours and performance ratio tracking
-- Filter by group (PIS, SECTOR, SECTOR (TR), SIDE MOLD, BLADE, 3G)
+## สารบัญ
 
-### Timeline Viewer
-- Gantt chart visualization of machine operations
-- Custom date range selection
-- Export data to CSV
-- Visual status representation with colors
+- [ฟีเจอร์หลัก](#ฟีเจอร์หลัก)
+- [เทคโนโลยีที่ใช้](#เทคโนโลยีที่ใช้)
+- [โครงสร้างโปรเจ็ค](#โครงสร้างโปรเจ็ค)
+- [การติดตั้ง](#การติดตั้ง)
+- [การพัฒนา (Development)](#การพัฒนา-development)
+- [การ Deploy Production](#การ-deploy-production)
+- [API Endpoints](#api-endpoints)
+- [Database Schema](#database-schema)
+- [ระบบสี](#ระบบสี)
 
-### Machine Setup
-- Configure Weekly and Monthly Target Ratios
-- Edit settings per machine
-- Save/Cancel changes with validation
-- Group filtering
+---
 
-## Tech Stack
+## ฟีเจอร์หลัก
 
-| Category | Technology |
-|----------|------------|
-| Frontend | React 18, TypeScript, Vite |
-| Styling | Tailwind CSS |
-| State Management | Zustand |
-| Database | MySQL (mysql2) |
-| Hosting | Vercel (Serverless Functions) |
-| Icons | Lucide React |
-| Date Utils | date-fns |
+### 1. Timeline Viewer (หน้าแรก)
+- แสดง Gantt Chart ของการทำงานเครื่องจักร
+- เลือกช่วงวันที่แบบกำหนดเอง
+- ปุ่ม Quick Select: Today, Yesterday, This Week, Last 7 Days, This Month, Last 30 Days
+- บันทึกช่วงวันที่ล่าสุดใน localStorage
+- Export ข้อมูลเป็น CSV
+- แสดงสถานะด้วยสี (RUN/STOP/REWORK)
+- Tooltip แสดงรายละเอียดเมื่อ hover
+- จัดกลุ่มตาม Group Name
 
-## Getting Started
+### 2. Machine Monitoring (สถานะเครื่องจักร)
+- แสดงสถานะเครื่องจักรแบบ Real-time (อัพเดททุก 10 วินาที)
+- ตารางแบบ 2 คอลัมน์ responsive
+- แสดงสี indicator ตามสถานะ (STOP/RUN/REWORK)
+- คำนวณ Weekly/Monthly Actual Ratio อัตโนมัติ
+- กรองตาม Group
+- Dark/Light mode
 
-### Prerequisites
+### 3. Machine Setup (ตั้งค่าเครื่องจักร)
+- เพิ่ม/แก้ไข/ลบเครื่องจักร
+- ตั้งค่า Weekly Target และ Monthly Target
+- Inline editing พร้อม validation
+- กรองตาม Group
+- ยืนยันก่อนลบ
+
+### 4. Simulation (เฉพาะ Development)
+- สร้างข้อมูลจำลองสำหรับทดสอบ
+- ซ่อนอัตโนมัติใน Production mode
+
+---
+
+## เทคโนโลยีที่ใช้
+
+| หมวด | เทคโนโลยี |
+|------|----------|
+| **Frontend** | React 18, TypeScript, Vite |
+| **Styling** | Tailwind CSS, Dark Mode |
+| **State Management** | Zustand |
+| **Animation** | Framer Motion |
+| **Table** | TanStack React Table |
+| **Icons** | Lucide React |
+| **Date** | date-fns |
+| **Database** | MySQL / TiDB Cloud |
+| **ORM** | Prisma |
+| **API** | Vercel Serverless Functions / Express.js |
+| **Hosting** | Vercel / PM2 (Local) |
+
+---
+
+## โครงสร้างโปรเจ็ค
+
+```
+machine-monitoring-system/
+│
+├── api/                        # Vercel Serverless Functions
+│   ├── health.ts               # Health check endpoint
+│   ├── machine-status.ts       # สถานะเครื่องจักร
+│   ├── machine-settings.ts     # CRUD ตั้งค่าเครื่องจักร
+│   ├── timeline-data.ts        # ข้อมูล Timeline
+│   └── timeline-segments.ts    # Segment data
+│
+├── src/                        # React Frontend
+│   ├── components/             # UI Components
+│   │   ├── Header.tsx          # Navigation + Dark mode
+│   │   ├── TimelineViewer.tsx  # หน้า Timeline
+│   │   ├── MachineStatusTable.tsx  # ตารางสถานะ
+│   │   ├── MachineSetup.tsx    # หน้าตั้งค่า
+│   │   ├── SimulationPage.tsx  # หน้า Simulation (Dev only)
+│   │   ├── DataTable.tsx       # Reusable table
+│   │   ├── ErrorBoundary.tsx   # Error handling
+│   │   └── PageTransition.tsx  # Animation wrapper
+│   │
+│   ├── pages/                  # Page components
+│   │   └── MachineStatusPage.tsx
+│   │
+│   ├── store/                  # Zustand State
+│   │   ├── useMachineStore.ts  # Machine data store
+│   │   └── useThemeStore.ts    # Theme store
+│   │
+│   ├── lib/                    # Utilities
+│   │   └── api.ts              # API client
+│   │
+│   ├── types/                  # TypeScript Types
+│   │   └── index.ts
+│   │
+│   ├── utils/                  # Helper functions
+│   │   └── helpers.ts
+│   │
+│   ├── App.tsx                 # Main App
+│   └── main.tsx                # Entry point
+│
+├── scripts/                    # Production Scripts (Windows)
+│   ├── start-production.bat    # เริ่ม server
+│   ├── stop-production.bat     # หยุด server
+│   ├── install-startup.bat     # ติดตั้ง Windows startup
+│   └── startup-service.bat     # Script สำหรับ startup
+│
+├── prisma/                     # Database
+│   ├── schema.prisma           # Database schema
+│   └── seed.ts                 # Seed data
+│
+├── logs/                       # PM2 Logs
+│
+├── server.cjs                  # Express Production Server
+├── ecosystem.config.cjs        # PM2 Configuration
+├── vercel.json                 # Vercel Configuration
+├── package.json
+└── .env.local                  # Environment Variables (git ignored)
+```
+
+---
+
+## การติดตั้ง
+
+### ความต้องการระบบ
 - Node.js 18+
-- MySQL database
+- npm หรือ yarn
+- MySQL Database (หรือ TiDB Cloud)
 
-### Installation
+### ขั้นตอนการติดตั้ง
 
 ```bash
-# Clone repository
+# 1. Clone repository
 git clone https://github.com/mctery/machine-monitoring-system.git
 cd machine-monitoring-system
 
-# Install dependencies
+# 2. ติดตั้ง dependencies
 npm install
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your database credentials
+# 3. สร้างไฟล์ environment
+cp .env.example .env.local
+
+# 4. แก้ไขค่า database ใน .env.local
 ```
 
 ### Environment Variables
 
+สร้างไฟล์ `.env.local` ด้วยค่าต่อไปนี้:
+
 ```env
-DATABASE_URL="mysql://user:password@host:3306/database"
-DB_HOST=your-mysql-host
+# Database Configuration
+DB_HOST=your-database-host
 DB_PORT=3306
 DB_USER=your-username
 DB_PASSWORD=your-password
 DB_NAME=your-database
+DB_SSL=true   # ใส่ true ถ้าใช้ TiDB Cloud
+
+# Optional
+DATABASE_URL="mysql://user:password@host:port/database"
 ```
-
-### Development
-
-```bash
-# Run with Vercel dev (includes API)
-npm run dev:vercel
-
-# Or run frontend only
-npm run dev
-```
-
-Open browser at: **http://localhost:3000**
 
 ### Database Setup
 
 ```bash
-# Push schema to database
+# Push schema ไป database
 npm run db:push
 
-# Seed sample data (60 machines)
+# Seed ข้อมูลตัวอย่าง (60 เครื่อง)
 npm run db:seed
+
+# เปิด Prisma Studio (GUI)
+npm run db:studio
 ```
 
-## Project Structure
+---
 
+## การพัฒนา (Development)
+
+### รัน Development Server
+
+```bash
+# วิธีที่ 1: รันผ่าน Vercel CLI (แนะนำ - รวม API)
+npm run dev:vercel
+
+# วิธีที่ 2: รันเฉพาะ Frontend
+npm run dev
 ```
-mqtt-monitoring-system/
-├── api/                    # Vercel Serverless Functions
-│   ├── db.ts              # MySQL connection pool
-│   └── machine-hours.ts   # API endpoints
-├── prisma/
-│   ├── schema.prisma      # Database schema
-│   └── seed.ts            # Seed data script
-├── src/
-│   ├── components/        # React Components
-│   │   ├── Header.tsx
-│   │   ├── GroupFilter.tsx
-│   │   ├── MachineStatusTable.tsx
-│   │   ├── TimelineViewer.tsx
-│   │   └── MachineSetup.tsx
-│   ├── pages/             # Page components
-│   ├── store/             # Zustand state management
-│   │   └── useMachineStore.ts
-│   ├── lib/               # API client
-│   │   └── api.ts
-│   ├── types/             # TypeScript types
-│   └── App.tsx
-├── vercel.json            # Vercel configuration
-└── package.json
+
+เปิด browser ที่: **http://localhost:3000**
+
+### Scripts ที่มี
+
+| คำสั่ง | คำอธิบาย |
+|--------|----------|
+| `npm run dev` | รัน Vite dev server (Frontend only) |
+| `npm run dev:vercel` | รัน Vercel dev (Frontend + API) |
+| `npm run build` | Build สำหรับ production |
+| `npm run preview` | Preview production build |
+| `npm run start` | รัน Express production server |
+| `npm run start:pm2` | รันผ่าน PM2 |
+| `npm run stop:pm2` | หยุด PM2 |
+| `npm run logs:pm2` | ดู PM2 logs |
+| `npm run db:push` | Push Prisma schema |
+| `npm run db:seed` | Seed ข้อมูลตัวอย่าง |
+| `npm run db:studio` | เปิด Prisma Studio |
+
+---
+
+## การ Deploy Production
+
+### วิธีที่ 1: Vercel (Cloud)
+
+```bash
+# ติดตั้ง Vercel CLI
+npm install -g vercel
+
+# Deploy
+vercel
+
+# ตั้งค่า Environment Variables บน Vercel Dashboard
+# Settings > Environment Variables
 ```
+
+### วิธีที่ 2: PM2 (Local Production)
+
+#### รันแบบ Manual
+
+```bash
+# Build frontend
+npm run build
+
+# รัน server
+npm start
+
+# หรือใช้ PM2
+npm run start:pm2
+```
+
+#### รันผ่าน Windows Script
+
+```bash
+# เริ่ม server
+scripts\start-production.bat
+
+# หยุด server
+scripts\stop-production.bat
+```
+
+#### ติดตั้ง Windows Startup (Auto-start เมื่อเปิดเครื่อง)
+
+```bash
+# คลิกขวา > Run as Administrator
+scripts\install-startup.bat
+```
+
+Script จะทำการ:
+1. ติดตั้ง PM2 (ถ้ายังไม่มี)
+2. ติดตั้ง pm2-windows-startup
+3. Build project
+4. Start server
+5. บันทึก process list สำหรับ auto-start
+
+#### คำสั่ง PM2 ที่ใช้บ่อย
+
+| คำสั่ง | คำอธิบาย |
+|--------|----------|
+| `pm2 status` | ดูสถานะ server |
+| `pm2 logs` | ดู logs แบบ real-time |
+| `pm2 restart all` | Restart server |
+| `pm2 stop all` | หยุด server |
+| `pm2 monit` | เปิด monitoring dashboard |
+
+---
 
 ## API Endpoints
 
-### GET /api/machine-hours
-Fetch machine hours data
+### GET /api/health
+ตรวจสอบสถานะ server และ database
 
-**Query Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| machine | string | Filter by machine name |
-| from | ISO date | Start date filter |
-| to | ISO date | End date filter |
-| limit | number | Max results (default: 100, max: 1000) |
+**Response:**
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "timestamp": "2025-01-06T12:00:00.000Z"
+}
+```
+
+### GET /api/machine-status
+ดึงข้อมูลสถานะเครื่องจักรทั้งหมด
 
 **Response:**
 ```json
@@ -144,113 +317,138 @@ Fetch machine hours data
   "data": [
     {
       "id": 1,
-      "logTime": "2025-12-09T08:00:00.000Z",
-      "machineName": "Machine-01",
+      "machineName": "3G Laser 1",
+      "groupName": "3G",
+      "weeklyTarget": 80,
+      "monthlyTarget": 80,
       "runHour": 6.5,
       "stopHour": 1.5,
       "runStatus": 1,
       "stopStatus": 0,
-      "reworkStatus": null
+      "reworkStatus": 0,
+      "weeklyActualRatio": 81.25,
+      "monthlyActualRatio": 79.50
     }
   ],
-  "count": 1
+  "groups": ["3G", "BLADE", "PIS"],
+  "count": 60
 }
 ```
 
-### POST /api/machine-hours
-Create new machine hours entry
+### GET /api/timeline-data
+ดึงข้อมูล Timeline ตามช่วงเวลา
 
-**Request Body:**
-```json
-{
-  "logTime": "2025-12-09T08:00:00.000Z",
-  "machineName": "Machine-01",
-  "runHour": 6.5,
-  "stopHour": 1.5,
-  "runStatus": 1,
-  "stopStatus": 0,
-  "reworkStatus": null
-}
-```
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| from | ISO date | วันที่เริ่มต้น |
+| to | ISO date | วันที่สิ้นสุด |
+
+### GET /api/timeline-segments
+ดึงข้อมูล segment สำหรับ Timeline
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| from | ISO date | วันที่เริ่มต้น |
+| to | ISO date | วันที่สิ้นสุด |
+
+### GET/POST/PUT/DELETE /api/machine-settings
+CRUD สำหรับตั้งค่าเครื่องจักร
+
+---
 
 ## Database Schema
+
+### ตาราง machine_hours
+เก็บข้อมูลชั่วโมงการทำงานของเครื่องจักร (บันทึกทุก 10 นาที)
 
 ```sql
 CREATE TABLE machine_hours (
   id INT AUTO_INCREMENT PRIMARY KEY,
   log_time DATETIME NOT NULL,
   machine_name VARCHAR(50) NOT NULL,
-  run_hour FLOAT NOT NULL,
-  stop_hour FLOAT NOT NULL,
-  run_status TINYINT NOT NULL,
+  run_hour DECIMAL(10,2) NOT NULL,
+  stop_hour DECIMAL(10,2) NOT NULL,
+  run_status TINYINT NOT NULL,      -- 1 = Running, 0 = Stopped
   stop_status TINYINT NOT NULL,
-  rework_status INT NULL
+  rework_status INT NULL,           -- 1 = Rework
+  INDEX idx_machine_time (machine_name, log_time)
 );
 ```
 
-## Machine Groups
+### ตาราง machine_settings
+เก็บการตั้งค่าเครื่องจักร
 
-| Group | Machines |
-|-------|----------|
-| PIS | Model, PIS, Side piece, NC Lathe |
+```sql
+CREATE TABLE machine_settings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  machine_name VARCHAR(50) UNIQUE NOT NULL,
+  group_name VARCHAR(50) NOT NULL,
+  weekly_target DECIMAL(5,2) DEFAULT 80.00,
+  monthly_target DECIMAL(5,2) DEFAULT 80.00,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+---
+
+## ระบบสี
+
+### สถานะเครื่องจักร
+| สถานะ | สี | คำอธิบาย |
+|-------|-----|----------|
+| RUN | เขียว | เครื่องกำลังทำงาน |
+| STOP | เหลือง | เครื่องหยุด |
+| REWORK | ส้ม | กำลัง Rework |
+
+### Performance Indicators
+| ระดับ | สี | เงื่อนไข |
+|-------|-----|----------|
+| Good | ขาว/เขียว | >= 80% ของ target |
+| Warning | เหลือง | 50-80% ของ target |
+| Critical | แดง | < 50% ของ target |
+
+---
+
+## กลุ่มเครื่องจักร
+
+| กลุ่ม | เครื่องจักร |
+|-------|------------|
+| 3G | 3G Laser 1-4, Model No.7 |
+| BLADE | Laser 1-2 |
+| PIS | Laser High Contrast, Model 1-5 |
 | SECTOR | SECTOR 1-20 |
 | SECTOR (TR) | SECTOR 21-40 |
 | SIDE MOLD | Letter 1-4 |
-| BLADE | Laser 1-4 |
-| 3G | 3G 1-4 |
 
-## Deployment
+---
 
-### Deploy to Vercel
+## การแก้ไขปัญหา
 
+### ปัญหา: Database Connection Error
+```
+Error: ER_UNKNOWN_ERROR
+```
+**วิธีแก้:** ตรวจสอบว่าได้ตั้งค่า `DB_SSL=true` ใน `.env.local` (สำหรับ TiDB Cloud)
+
+### ปัญหา: NaN แสดงในตาราง
+**วิธีแก้:** ตรวจสอบว่า database มีข้อมูลในช่วงวันที่ที่เลือก
+
+### ปัญหา: PM2 ไม่เริ่มทำงาน
 ```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Deploy
-vercel
-
-# Set environment variables on Vercel Dashboard
-# Settings > Environment Variables > Add DATABASE_URL, DB_HOST, etc.
+# ลอง restart
+pm2 kill
+pm2 start ecosystem.config.cjs
 ```
 
-### Build for Production
-
-```bash
-npm run build
-# Output in dist/
-```
-
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Vite dev server |
-| `npm run dev:vercel` | Start Vercel dev (with API) |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview production build |
-| `npm run db:push` | Push Prisma schema to database |
-| `npm run db:seed` | Seed database with sample data |
-
-## Color System
-
-### Machine States
-| State | Color | Description |
-|-------|-------|-------------|
-| RUN | Green | Machine is running |
-| STOP | Yellow | Machine is stopped |
-
-### Performance Indicators
-| Level | Color | Condition |
-|-------|-------|-----------|
-| Good | White | >= 80% of target |
-| Warning | Yellow | 50-80% of target |
-| Critical | Red | < 50% of target |
+---
 
 ## License
 
-Copyright 2024 True Mold (Thailand) Co., Ltd. (Bridgestone Group)
+Copyright 2024-2025 True Mold (Thailand) Co., Ltd. (Bridgestone Group)
 
-## Authors
+## ผู้พัฒนา
 
-Built for TMOT Manufacturing Operations
+พัฒนาสำหรับ TMOT Manufacturing Operations
