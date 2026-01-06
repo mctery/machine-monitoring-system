@@ -11,7 +11,8 @@ const Header = () => {
     { path: '/', label: 'Timeline Viewer' },
     { path: '/status', label: 'Machine Monitoring' },
     { path: '/setup', label: 'Setup' },
-    { path: '/simulation', label: 'Simulation' }
+    // Only show Simulation in development mode
+    ...(import.meta.env.DEV ? [{ path: '/simulation', label: 'Simulation' }] : [])
   ];
 
   return (

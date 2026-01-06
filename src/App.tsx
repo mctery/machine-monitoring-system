@@ -30,7 +30,10 @@ function App() {
                 <Route path="/" element={<TimelineViewer />} />
                 <Route path="/status" element={<MachineStatusPage />} />
                 <Route path="/setup" element={<MachineSetup />} />
-                <Route path="/simulation" element={<SimulationPage />} />
+                {/* Only show Simulation route in development mode */}
+                {import.meta.env.DEV && (
+                  <Route path="/simulation" element={<SimulationPage />} />
+                )}
               </Routes>
             </Suspense>
           </main>

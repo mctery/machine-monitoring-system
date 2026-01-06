@@ -105,12 +105,12 @@ const mapToTimelineData = (
     }
   }
 
-  // Calculate Ratio 2 values (Group averages)
-  const actualRatio2 = groupAvg.avgActualRatio1; // Group average of Actual Ratio 1
-  const trueRatio2 = groupAvg.avgTrueRatio1;     // Group average of True Ratio 1
+  // Calculate Ratio 2 values (Group averages) - default to 0 if NaN or undefined
+  const actualRatio2 = Number(groupAvg.avgActualRatio1) || 0;
+  const trueRatio2 = Number(groupAvg.avgTrueRatio1) || 0;
 
   // WARNING RATIO = ACTUAL RATIO 2 - TRUE RATIO 2
-  const warningRatio = Number((actualRatio2 - trueRatio2).toFixed(2));
+  const warningRatio = Number((actualRatio2 - trueRatio2).toFixed(2)) || 0;
 
   return {
     machineName: data.machineName,
@@ -118,9 +118,9 @@ const mapToTimelineData = (
     run: totalRun,
     warning: warningHours,
     stop: totalStop,
-    actualRatio1: data.actualRatio1,
+    actualRatio1: Number(data.actualRatio1) || 0,
     actualRatio2,
-    trueRatio1: data.trueRatio1,
+    trueRatio1: Number(data.trueRatio1) || 0,
     trueRatio2,
     warningRatio,
     timeline

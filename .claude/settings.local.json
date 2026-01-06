@@ -18,7 +18,10 @@
       "Bash(git checkout:*)",
       "Bash(npm install framer-motion)",
       "Bash(npm run build:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm install:*)",
+      "Bash(ls:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Add PM2 production setup and hide simulation in prod\n\n- Add Express server \\(server.cjs\\) for local production\n- Add PM2 ecosystem config for process management\n- Add Windows startup scripts in scripts/ folder\n- Hide Simulation page in production mode\n- Fix NaN values in timeline ratios \\(default to 0\\)\n- Add logs folder for PM2 logs\n- Update .gitignore for logs and env files\n- Delete redundant .env file \\(use .env.local only\\)\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
