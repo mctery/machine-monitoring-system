@@ -16,7 +16,6 @@ interface MachineHoursData {
   machineName: string;
   runHour: number;
   stopHour: number;
-  warningHour: number;
   runStatus: number;
   stopStatus: number;
   reworkStatus: number | null;
@@ -65,7 +64,6 @@ export interface TimelineApiData {
   monthlyTarget: number;
   runHour: number;
   stopHour: number;
-  warningHour: number;
   actualRatio1: number;
   trueRatio1: number;
 }

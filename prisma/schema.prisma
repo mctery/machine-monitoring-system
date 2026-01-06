@@ -22,3 +22,15 @@ model MachineHours {
 
   @@map("machine_hours")
 }
+
+model MachineSettings {
+  id            Int      @id @default(autoincrement())
+  machineName   String   @unique @map("machine_name") @db.VarChar(50)
+  groupName     String   @map("group_name") @db.VarChar(50)
+  weeklyTarget  Float    @default(80) @map("weekly_target")
+  monthlyTarget Float    @default(80) @map("monthly_target")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("machine_settings")
+}

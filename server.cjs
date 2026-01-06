@@ -39,7 +39,7 @@ async function getConnection() {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    ssl: process.env.DB_SSL === 'true' ? {} : undefined
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined
   });
 }
 
@@ -249,29 +249,47 @@ app.get('/api/timeline-data', async (req, res) => {
     const toDate = new Date(to).toISOString().slice(0, 19).replace('T', ' ');
 
     const sql = `
+      WITH range_stats AS (
+        SELECT
+          mh.machine_name,
+          SUM(mh.run_hour) as total_run,
+          SUM(mh.stop_hour) as total_stop
+        FROM machine_hours mh
+        WHERE mh.log_time >= ? AND mh.log_time <= ?
+        GROUP BY mh.machine_name
+      )
       SELECT
         ms.machine_name as machineName,
         ms.group_name as groupName,
         ms.weekly_target as weeklyTarget,
         ms.monthly_target as monthlyTarget,
-        SUM(CASE WHEN mh.run_status = 1 THEN mh.run_hour ELSE 0 END) as totalRun,
-        SUM(CASE WHEN mh.run_status = 0 THEN mh.stop_hour ELSE 0 END) as totalStop,
-        COUNT(CASE WHEN mh.rework_status = 1 THEN 1 END) as warningCount
+        COALESCE(rs.total_run, 0) as runHour,
+        COALESCE(rs.total_stop, 0) as stopHour,
+        ROUND(CASE
+          WHEN (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0)) > 0
+          THEN (COALESCE(rs.total_run, 0) / (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0))) * 100
+          ELSE 0
+        END, 2) as actualRatio1,
+        ROUND(CASE
+          WHEN (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0)) > 0
+          THEN (COALESCE(rs.total_run, 0) / (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0))) * 100
+          ELSE 0
+        END, 2) as trueRatio1
       FROM machine_settings ms
-      LEFT JOIN machine_hours mh ON ms.machine_name = mh.machine_name
-        AND mh.log_time BETWEEN ? AND ?
-      GROUP BY ms.machine_name, ms.group_name, ms.weekly_target, ms.monthly_target
+      LEFT JOIN range_stats rs ON ms.machine_name = rs.machine_name
       ORDER BY ms.group_name, ms.machine_name
     `;
 
     const [rows] = await connection.execute(sql, [fromDate, toDate]);
     const data = rows.map(row => ({
-      ...row,
+      machineName: row.machineName,
+      groupName: row.groupName,
       weeklyTarget: Number(row.weeklyTarget) || 0,
       monthlyTarget: Number(row.monthlyTarget) || 0,
-      totalRun: Number(row.totalRun) || 0,
-      totalStop: Number(row.totalStop) || 0,
-      warningCount: Number(row.warningCount) || 0
+      runHour: Number(row.runHour) || 0,
+      stopHour: Number(row.stopHour) || 0,
+      actualRatio1: Number(row.actualRatio1) || 0,
+      trueRatio1: Number(row.trueRatio1) || 0
     }));
 
     res.json({ data, count: data.length });

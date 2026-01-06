@@ -72,7 +72,8 @@ const mapToTimelineData = (
   groupAverages: Map<string, { avgActualRatio1: number; avgTrueRatio1: number }>,
   segments: TimelineSegmentData[]
 ): TimelineData => {
-  const warningHours = data.warningHour || 0;
+  // Warning hours not available in database - set to 0
+  const warningHours = 0;
 
   // Get group averages
   const groupAvg = groupAverages.get(data.groupName) || { avgActualRatio1: 0, avgTrueRatio1: 0 };

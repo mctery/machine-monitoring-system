@@ -125,7 +125,7 @@ const SimulationPage = () => {
         machineName: d.machineName,
         runHour: d.runHour,
         stopHour: d.stopHour,
-        warningHour: d.warningHour,
+        warningHour: 0, // Not in database
         runStatus: d.runStatus,
         stopStatus: d.stopStatus,
       })));
@@ -192,7 +192,6 @@ const SimulationPage = () => {
         machineName: formData.machineName,
         runHour: parseFloat(formData.runHour) || 0,
         stopHour: parseFloat(formData.stopHour) || 0,
-        warningHour: parseFloat(formData.warningHour) || 0,
         runStatus: parseInt(formData.runStatus) || 0,
         stopStatus: parseInt(formData.stopStatus) || 0,
         reworkStatus: formData.reworkStatus ? parseInt(formData.reworkStatus) : null,
@@ -234,7 +233,6 @@ const SimulationPage = () => {
         machineName: formData.machineName,
         runHour: isStop ? 0 : runHourValue,
         stopHour: isStop ? stopHourValue : 0,
-        warningHour: 0,
         runStatus: isRun ? 1 : 0,
         stopStatus: isStop ? 1 : 0,
         reworkStatus: isRework ? 1 : null,
@@ -338,7 +336,6 @@ const SimulationPage = () => {
           machineName: formData.machineName,
           runHour: entry.runHour,
           stopHour: entry.stopHour,
-          warningHour: entry.warningHour,
           runStatus: entry.runStatus,
           stopStatus: entry.stopStatus,
           reworkStatus: entry.reworkStatus,
@@ -859,7 +856,6 @@ const SimulationPage = () => {
                     <th className="text-left py-2 px-2 text-gray-600 dark:text-gray-400">Machine</th>
                     <th className="text-center py-2 px-2 text-gray-600 dark:text-gray-400">Run</th>
                     <th className="text-center py-2 px-2 text-gray-600 dark:text-gray-400">Stop</th>
-                    <th className="text-center py-2 px-2 text-gray-600 dark:text-gray-400">Warn</th>
                     <th className="text-center py-2 px-2 text-gray-600 dark:text-gray-400">Status</th>
                   </tr>
                 </thead>
@@ -882,9 +878,6 @@ const SimulationPage = () => {
                       </td>
                       <td className="py-2 px-2 text-center text-gray-700 dark:text-gray-300">
                         {entry.stopHour.toFixed(2)}
-                      </td>
-                      <td className="py-2 px-2 text-center text-gray-700 dark:text-gray-300">
-                        {entry.warningHour.toFixed(2)}
                       </td>
                       <td className="py-2 px-2 text-center">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${
