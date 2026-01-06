@@ -62,8 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         SELECT
           mh.machine_name,
           SUM(mh.run_hour) as total_run,
-          SUM(mh.stop_hour) as total_stop,
-          SUM(COALESCE(mh.warning_hour, 0)) as total_warning
+          SUM(mh.stop_hour) as total_stop
         FROM machine_hours mh
         WHERE mh.log_time >= ? AND mh.log_time <= ?
         GROUP BY mh.machine_name
@@ -75,17 +74,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ms.monthly_target as monthlyTarget,
         COALESCE(rs.total_run, 0) as runHour,
         COALESCE(rs.total_stop, 0) as stopHour,
-        COALESCE(rs.total_warning, 0) as warningHour,
         -- Actual Ratio 1 = (Run / (Run + Stop)) * 100
         ROUND(CASE
           WHEN (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0)) > 0
           THEN (COALESCE(rs.total_run, 0) / (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0))) * 100
           ELSE 0
         END, 2) as actualRatio1,
-        -- True Ratio 1 = ((Run - Warning) / (Run + Stop)) * 100
+        -- True Ratio 1 = same as Actual Ratio (no warning data)
         ROUND(CASE
           WHEN (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0)) > 0
-          THEN ((COALESCE(rs.total_run, 0) - COALESCE(rs.total_warning, 0)) / (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0))) * 100
+          THEN (COALESCE(rs.total_run, 0) / (COALESCE(rs.total_run, 0) + COALESCE(rs.total_stop, 0))) * 100
           ELSE 0
         END, 2) as trueRatio1
       FROM machine_settings ms
@@ -103,7 +101,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       monthlyTarget: string | number;
       runHour: string | number;
       stopHour: string | number;
-      warningHour: string | number;
       actualRatio1: string | number;
       trueRatio1: string | number;
     }>).map(row => ({
@@ -113,7 +110,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       monthlyTarget: Number(row.monthlyTarget) || 0,
       runHour: Number(row.runHour) || 0,
       stopHour: Number(row.stopHour) || 0,
-      warningHour: Number(row.warningHour) || 0,
       actualRatio1: Number(row.actualRatio1) || 0,
       trueRatio1: Number(row.trueRatio1) || 0
     }));

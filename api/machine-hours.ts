@@ -7,7 +7,6 @@ interface MachineHoursRow {
   machine_name: string;
   run_hour: number;
   stop_hour: number;
-  warning_hour: number;
   run_status: number;
   stop_status: number;
   rework_status: number | null;
@@ -99,7 +98,6 @@ async function getMachineHours(req: VercelRequest, res: VercelResponse, connecti
     machineName: row.machine_name,
     runHour: Number(row.run_hour),
     stopHour: Number(row.stop_hour),
-    warningHour: Number(row.warning_hour) || 0,
     runStatus: row.run_status,
     stopStatus: row.stop_status,
     reworkStatus: row.rework_status
@@ -109,7 +107,7 @@ async function getMachineHours(req: VercelRequest, res: VercelResponse, connecti
 }
 
 async function createMachineHours(req: VercelRequest, res: VercelResponse, connection: mysql.Connection) {
-  const { logTime, machineName, runHour, stopHour, warningHour, runStatus, stopStatus, reworkStatus } = req.body;
+  const { logTime, machineName, runHour, stopHour, runStatus, stopStatus, reworkStatus } = req.body;
 
   if (!logTime || !machineName || runHour === undefined || stopHour === undefined) {
     return res.status(400).json({
@@ -118,8 +116,8 @@ async function createMachineHours(req: VercelRequest, res: VercelResponse, conne
   }
 
   const sql = `
-    INSERT INTO machine_hours (log_time, machine_name, run_hour, stop_hour, warning_hour, run_status, stop_status, rework_status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO machine_hours (log_time, machine_name, run_hour, stop_hour, run_status, stop_status, rework_status)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
   const [result] = await connection.execute(sql, [
@@ -127,7 +125,6 @@ async function createMachineHours(req: VercelRequest, res: VercelResponse, conne
     machineName,
     Number(runHour),
     Number(stopHour),
-    Number(warningHour) || 0,
     Number(runStatus) || 0,
     Number(stopStatus) || 0,
     reworkStatus !== undefined ? Number(reworkStatus) : null
@@ -135,6 +132,6 @@ async function createMachineHours(req: VercelRequest, res: VercelResponse, conne
 
   return res.status(201).json({
     message: 'Created',
-    data: { id: (result as { insertId: number }).insertId, logTime, machineName, runHour, stopHour, warningHour: Number(warningHour) || 0, runStatus, stopStatus, reworkStatus }
+    data: { id: (result as { insertId: number }).insertId, logTime, machineName, runHour, stopHour, runStatus, stopStatus, reworkStatus }
   });
 }
