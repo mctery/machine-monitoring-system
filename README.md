@@ -32,16 +32,18 @@
 ## ฟีเจอร์หลัก
 
 ### 1. Timeline Viewer (หน้าแรก `/`)
-- แสดง Gantt Chart ของการทำงานเครื่องจักร
+- แสดง Gantt Chart ของการทำงานเครื่องจักรแบบ Wall-clock time-based
 - เลือกช่วงวันที่-เวลาด้วย `datetime-local` input (แม่นยำถึงนาที)
-- ปุ่ม Quick Select: Today, Yesterday, This Week, Last 7 Days, This Month, Last 30 Days
+- Time axis แสดง 5 จุดเวลาอ้างอิงจาก From/To ที่เลือก
 - บันทึกช่วงวันที่ล่าสุดใน localStorage
 - Export ข้อมูลเป็น CSV (UTF-8 BOM)
 - แสดงสถานะด้วยสี (RUN/STOP/REWORK)
-- Tooltip แสดง Log Time, Run Hour, Stop Hour เมื่อ hover
-- จัดกลุ่มตาม Group Name
-- แสดง Actual Ratio 1/2, True Ratio 1/2, Warning Ratio
-- Timeline bar แสดงสัดส่วนตาม run_hour + stop_hour ของแต่ละ record
+- Instant tooltip (ไม่ delay) แสดง Log Time, Run Hour, Stop Hour เมื่อ hover
+- จัดกลุ่มตาม Group Name พร้อมหัวข้อ "Timeline : All Machine"
+- แสดง Actual Ratio 1/2, True Ratio 1/2, Warning Ratio พร้อม % suffix
+- Ratio cell ไล่ระดับสีตามค่า (ทั้ง 4 columns)
+- Timeline bar แสดงตำแหน่งจริงตามเวลา (absolute positioning) พร้อมแสดงช่องว่างเมื่อไม่มีข้อมูล
+- Layout compact (text-xs, h-7 bars) เพื่อแสดงข้อมูลจำนวนมาก
 
 ### 2. Machine Monitoring (สถานะเครื่องจักร `/status`)
 - แสดงสถานะเครื่องจักรแบบ Real-time (อัพเดททุก 10 วินาที)
@@ -58,7 +60,8 @@
 - Inline editing พร้อม validation
 - Autocomplete สำหรับ Group Name
 - กรองตาม Group
-- ยืนยันก่อนลบ
+- Natural sort (เรียงลำดับเหมือนหน้า Monitoring)
+- ยืนยันก่อนลบ (Confirm Modal)
 - ปุ่ม Initialize Data สำหรับ seed ข้อมูลเริ่มต้น (60 เครื่อง)
 
 ### 4. Simulation (เฉพาะ Development `/simulation`)
@@ -94,15 +97,16 @@
 machine-monitoring-system/
 │
 ├── api/                           # Vercel Serverless Functions
+│   ├── _db.ts                    # Shared utilities (CORS, date parsing, constants)
 │   ├── health.ts                  # Health check endpoint
 │   ├── machine-status.ts         # สถานะเครื่องจักร (GET)
 │   ├── machine-settings.ts       # CRUD ตั้งค่าเครื่องจักร
 │   ├── machine-hours.ts          # ดึง/สร้างข้อมูลชั่วโมงเครื่อง
+│   ├── machine-hours-times.ts    # Lightweight timestamps (gap detection)
 │   ├── timeline-data.ts          # ข้อมูล Timeline (aggregated)
 │   ├── timeline-segments.ts      # Segment data (individual records)
 │   ├── init-settings.ts          # Initialize ข้อมูลเครื่องจักรเริ่มต้น
-│   ├── seed-hours.ts             # Generate ข้อมูลทดสอบ
-│   └── test.ts                   # Test endpoint
+│   └── seed-hours.ts             # Generate ข้อมูลทดสอบ
 │
 ├── src/                           # React Frontend
 │   ├── components/                # UI Components
@@ -113,7 +117,7 @@ machine-monitoring-system/
 │   │   ├── SimulationPage.tsx     # หน้า Simulation (Dev only)
 │   │   ├── DataTable.tsx          # Reusable table component (TanStack)
 │   │   ├── AnimatedCell.tsx       # Cell animation on value change
-│   │   ├── GroupFilter.tsx        # Group filtering + color legend
+│   │   ├── ConfirmModal.tsx       # Confirmation dialog
 │   │   ├── ErrorBoundary.tsx      # Error handling boundary
 │   │   └── PageTransition.tsx     # Animation wrapper (Framer Motion)
 │   │
@@ -126,9 +130,6 @@ machine-monitoring-system/
 │   │
 │   ├── lib/                       # API Client
 │   │   └── api.ts                 # Frontend API calls (local datetime formatting)
-│   │
-│   ├── data/                      # Mock/Seed data
-│   │   └── mockData.ts            # Mock data for development
 │   │
 │   ├── types/                     # TypeScript Types
 │   │   └── index.ts
@@ -445,11 +446,17 @@ CRUD สำหรับตั้งค่าเครื่องจักร
 ### POST /api/init-settings
 Initialize machine_settings ด้วยข้อมูลเครื่องจักรเริ่มต้น (60 เครื่อง, 6 กลุ่ม)
 
-### GET /api/seed-hours
+### POST /api/seed-hours
 Generate ข้อมูลทดสอบ 30 วันย้อนหลัง (ลบข้อมูลเดิมก่อน, สำหรับ development)
 
-### GET /api/test
-ตรวจสอบ connectivity และการตั้งค่า environment variables
+### GET /api/machine-hours-times
+ดึง timestamps แบบ lightweight สำหรับตรวจสอบช่องว่างของข้อมูล (gap detection)
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| from | datetime string | วันที่-เวลาเริ่มต้น |
+| to | datetime string | วันที่-เวลาสิ้นสุด |
 
 ---
 
@@ -595,25 +602,71 @@ pm2 kill
 
 ## Changelog
 
-### v2.2.0
-- แก้ไข Timeline Viewer: เปลี่ยน date picker เป็น `datetime-local` (แม่นยำถึงนาที)
-- แก้ไข Timezone: ส่ง local datetime strings แทน UTC เพื่อให้ตรงกับ database
-- แก้ไข Timeline segments: แสดง run_hour/stop_hour จริงจาก database
-- แก้ไข Timeline bar: ใช้ run_hour + stop_hour เป็น weight สำหรับสัดส่วนแถบ
-- แก้ไข Tooltip: แสดง Log Time, Run Hour, Stop Hour ที่ตรงกับ database
-- ปรับปรุง API: รองรับ local datetime format (`YYYY-MM-DD HH:mm:ss`)
+### v2.3.0 (2026-03-04)
+
+#### Timeline Viewer - ออกแบบใหม่ทั้งหมด
+- **Wall-clock time-based positioning**: เปลี่ยนจาก flex-width เป็น absolute positioning ตามเวลาจริง
+- **Time axis**: แสดง 5 จุดเวลาอ้างอิงจาก From/To (รองรับ single-day `HH:mm` และ multi-day `MM/dd HH:mm`)
+- **Instant tooltip**: เปลี่ยนจาก native browser tooltip เป็น custom DOM tooltip ที่แสดงทันที (ไม่มี delay)
+- **Timeline gaps**: แสดงช่องว่างเมื่อไม่มีข้อมูล (คำนวณ segment width จาก median interval ระหว่าง records)
+- **Compact layout**: ปรับเป็น text-xs, h-7 bars, px-2 py-1.5 เพื่อแสดงข้อมูลจำนวนมาก
+- **Section title**: เพิ่มหัวข้อ "Timeline : All Machine"
+- **% suffix**: แสดง % ท้ายค่า Ratio ทุก column
+- **2 decimal places**: Run/Stop แสดงทศนิยม 2 ตำแหน่ง
+- **Ratio gradient colors**: เพิ่มระบบไล่ระดับสีให้ ACTUAL RATIO 2 และ TRUE RATIO 2
+- **ลบ Quick presets**: ลบปุ่ม Today, Yesterday, This Week ฯลฯ
+
+#### Code Optimization & Refactoring
+- **Shared API utilities** (`api/_db.ts`): รวม `setCORS()`, `parseDateParam()`, `errorMessage()` และ constants
+- **Constants extraction**: แยก `DEFAULT_WEEKLY_TARGET`, `DEFAULT_MONTHLY_TARGET`, `DEFAULT_QUERY_LIMIT`, `MAX_QUERY_LIMIT` จาก hardcoded values
+- **Duplicate ratio removal**: ลบ SQL duplicate ใน timeline-data (actualRatio1 เหมือน trueRatio1)
+- **Refactored all API files**: 8 ไฟล์ใช้ shared utilities แทน inline CORS/date parsing/error handling
+- **server.cjs sync**: เพิ่ม group filter ใน GET /machine-settings, ใช้ constants แทน hardcoded values
+- **Dead code cleanup**: ลบ unused PageTransition variants (fadeIn, scaleIn, slideInLeft, slideInRight)
+- **Removed files**: ลบ Prisma (schema, config, seed), mockData.ts, GroupFilter.tsx, test.ts
+
+#### Bug Fixes
+- **Timeline segment width**: แก้ segment ขยายเต็ม bar เมื่อ run_hour มีค่าสูง (ใช้ median interval แทน)
+- **TIMELINE header overflow**: แก้ "00:00" ทับข้อความ "TIMELINE" และ "23:59" ถูกตัดขอบขวา
+- **MachineSetup sort**: เพิ่ม natural sort ให้หน้า Setup เรียงลำดับเหมือนหน้า Monitoring
+
+### v2.2.0 (2026-02-28)
+
+#### Timeline Data Accuracy
+- เปลี่ยน date picker เป็น `datetime-local` (แม่นยำถึงนาที)
+- แก้ Timezone: ส่ง local datetime strings แทน UTC เพื่อให้ตรงกับ database
+- แสดง run_hour/stop_hour จริงจาก database ใน timeline segments
+- ใช้ run_hour + stop_hour เป็น weight สำหรับสัดส่วนแถบ timeline
+- Tooltip แสดง Log Time, Run Hour, Stop Hour ที่ตรงกับ database
+- API รองรับ local datetime format (`YYYY-MM-DD HH:mm:ss`)
 - เพิ่ม SETUP.md สำหรับ guide การติดตั้ง
 
 ### v2.1.0
+
+#### Documentation
 - ปรับปรุง README ให้ตรงกับระบบจริง
 - แก้ไขข้อมูลกลุ่มเครื่องจักรและจำนวนเครื่อง
 - เพิ่ม metadata ใน package.json
 
 ### v2.0.0
+
+#### Architecture Migration
 - เปลี่ยนจาก Prisma runtime เป็น mysql2 direct queries
 - เพิ่ม Express production server (server.cjs)
 - เพิ่ม PM2 configuration
 - เพิ่ม Windows startup scripts
+- Dual API architecture (Vercel Serverless + Express)
+
+### v1.0.0
+
+#### Initial Release
+- Machine Monitoring dashboard (Real-time status)
+- Timeline Viewer (Gantt chart)
+- Machine Setup (CRUD)
+- Simulation page (Dev only)
+- TanStack React Table + Framer Motion animations
+- Dark/Light mode
+- Zustand state management
 
 ---
 

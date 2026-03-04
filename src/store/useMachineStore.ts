@@ -21,13 +21,25 @@ const mapStatusToMachine = (data: MachineStatusData): Machine => ({
 // Build timeline segments from individual machine_hours records
 const buildTimelineSegments = (
   segments: TimelineSegmentData[],
-  machineName: string
+  machineName: string,
+  rangeEnd: Date
 ): TimelineSegment[] => {
   const machineSegments = segments
     .filter(s => s.machineName === machineName)
     .sort((a, b) => new Date(a.logTime).getTime() - new Date(b.logTime).getTime());
 
   const timeline: TimelineSegment[] = [];
+
+  // Calculate typical interval from data (median gap between consecutive records)
+  const intervals: number[] = [];
+  for (let i = 1; i < machineSegments.length; i++) {
+    const gap = new Date(machineSegments[i].logTime).getTime() - new Date(machineSegments[i - 1].logTime).getTime();
+    if (gap > 0) intervals.push(gap);
+  }
+  intervals.sort((a, b) => a - b);
+  const typicalInterval = intervals.length > 0
+    ? intervals[Math.floor(intervals.length / 2)] // median
+    : 60 * 60 * 1000; // fallback 1 hour
 
   for (let i = 0; i < machineSegments.length; i++) {
     const segment = machineSegments[i];
@@ -37,16 +49,13 @@ const buildTimelineSegments = (
     const runHour = segment.runHour || 0;
     const stopHour = segment.stopHour || 0;
 
-    // Calculate end time from actual duration (runHour + stopHour in hours)
-    // If next record exists and is closer, use that instead to avoid overlap
-    const durationMs = (runHour + stopHour) * 60 * 60 * 1000;
-    const calculatedEnd = new Date(logTime.getTime() + (durationMs || 60 * 60 * 1000)); // fallback 1hr
+    // End time = next record's logTime, or logTime + typical interval for last record
+    // This correctly shows gaps when no data exists
     const nextLogTime = i < machineSegments.length - 1
       ? new Date(machineSegments[i + 1].logTime)
       : null;
-    const endTime = nextLogTime && nextLogTime.getTime() < calculatedEnd.getTime()
-      ? nextLogTime
-      : calculatedEnd;
+    const fallbackEnd = new Date(Math.min(logTime.getTime() + typicalInterval, rangeEnd.getTime()));
+    const endTime = nextLogTime || fallbackEnd;
 
     // Determine state based on run_status/stop_status
     const state: 'RUN' | 'STOP' | 'REWORK' = segment.runStatus === 1
@@ -72,7 +81,8 @@ const buildTimelineSegments = (
 const mapToTimelineData = (
   data: TimelineApiData,
   groupAverages: Map<string, { avgActualRatio1: number; avgTrueRatio1: number }>,
-  segments: TimelineSegmentData[]
+  segments: TimelineSegmentData[],
+  rangeEnd: Date
 ): TimelineData => {
   // Warning hours not available in database - set to 0
   const warningHours = 0;
@@ -81,7 +91,7 @@ const mapToTimelineData = (
   const groupAvg = groupAverages.get(data.groupName) || { avgActualRatio1: 0, avgTrueRatio1: 0 };
 
   // Build timeline from actual segments data
-  let timeline = buildTimelineSegments(segments, data.machineName);
+  let timeline = buildTimelineSegments(segments, data.machineName, rangeEnd);
 
   // Use aggregated RUN/STOP values from API
   const totalRun = data.runHour || 0;
@@ -288,7 +298,7 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
       }
 
       // Convert to TimelineData type with group averages and real segments, sorted naturally
-      const timelineData = data.map(d => mapToTimelineData(d, groupAverages, segments))
+      const timelineData = data.map(d => mapToTimelineData(d, groupAverages, segments, dateRange.to))
         .sort((a, b) => {
           const groupCmp = a.groupName.localeCompare(b.groupName);
           if (groupCmp !== 0) return groupCmp;
