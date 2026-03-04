@@ -1,6 +1,9 @@
 {
   "name": "machine-monitoring-system",
-  "version": "2.0.0",
+  "version": "2.2.0",
+  "description": "Real-time machine monitoring system for TMOT Manufacturing (Bridgestone Group) - Dashboard with timeline visualization, machine status tracking, and performance analytics",
+  "author": "TMOT Manufacturing Operations",
+  "license": "UNLICENSED",
   "private": true,
   "type": "module",
   "scripts": {

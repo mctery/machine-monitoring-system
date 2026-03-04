@@ -15,11 +15,16 @@ const generateTimeline = (): TimelineSegment[] => {
     const start = new Date(currentTime);
     currentTime = new Date(currentTime.getTime() + duration * 60 * 60 * 1000);
 
+    const runHour = state === 'RUN' ? duration : 0;
+    const stopHour = state === 'STOP' || state === 'IDLE' ? duration : 0;
+
     segments.push({
       start,
       end: currentTime,
       state,
-      duration
+      duration,
+      runHour,
+      stopHour
     });
   }
 

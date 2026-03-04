@@ -4,9 +4,19 @@ import { motion } from 'framer-motion';
 import { useMachineStore } from '../store/useMachineStore';
 import { getTimelineColor, getRatioCellClass } from '../utils/helpers';
 import { format } from 'date-fns';
-import { Calendar, Download, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Download, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { TimelineSegment, TimelineData } from '../types';
 import PageTransition, { fadeInUp, staggerContainer, AnimatePresence, contentFadeIn } from './PageTransition';
+
+// Format Date to datetime-local input value (local time, not UTC)
+const toDateTimeLocal = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 // Memoized timeline segment component
 const TimelineSegmentBar = memo(({
@@ -18,7 +28,7 @@ const TimelineSegmentBar = memo(({
 }) => {
   const startStr = format(segment.start, 'dd/MM/yyyy HH:mm');
   const endStr = format(segment.end, 'dd/MM/yyyy HH:mm');
-  const tooltip = `${segment.state}: ${segment.duration.toFixed(1)} hrs\n${startStr} - ${endStr}`;
+  const tooltip = `${segment.state}\nLog Time: ${startStr} - ${endStr}\nRun Hour: ${segment.runHour} | Stop Hour: ${segment.stopHour}`;
 
   return (
     <div
@@ -26,7 +36,7 @@ const TimelineSegmentBar = memo(({
       style={{ width: `${widthPercent}%` }}
       title={tooltip}
       role="img"
-      aria-label={`${segment.state} for ${segment.duration.toFixed(1)} hours from ${startStr} to ${endStr}`}
+      aria-label={`${segment.state} from ${startStr} to ${endStr}, Run: ${segment.runHour}, Stop: ${segment.stopHour}`}
     />
   );
 });
@@ -94,10 +104,8 @@ GroupHeaderRow.displayName = 'GroupHeaderRow';
 
 const TimelineViewer = () => {
   const { timelineData, dateRange, setDateRange, loadTimelineData, exportToCSV, isLoading, error, clearError } = useMachineStore();
-  const [fromDateStr, setFromDateStr] = useState(format(dateRange.from, "yyyy-MM-dd"));
-  const [fromTimeStr, setFromTimeStr] = useState(format(dateRange.from, "HH") + ":00");
-  const [toDateStr, setToDateStr] = useState(format(dateRange.to, "yyyy-MM-dd"));
-  const [toTimeStr, setToTimeStr] = useState(format(dateRange.to, "HH") + ":00");
+  const [fromStr, setFromStr] = useState(toDateTimeLocal(dateRange.from));
+  const [toStr, setToStr] = useState(toDateTimeLocal(dateRange.to));
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -119,8 +127,8 @@ const TimelineViewer = () => {
   }, [timelineData]);
 
   const handleUpdate = useCallback(() => {
-    const from = new Date(`${fromDateStr}T${fromTimeStr}:00`);
-    const to = new Date(`${toDateStr}T${toTimeStr}:59`); // Add 59 seconds to include the full hour
+    const from = new Date(fromStr);
+    const to = new Date(toStr);
 
     // Validate dates
     if (isNaN(from.getTime()) || isNaN(to.getTime())) {
@@ -138,7 +146,7 @@ const TimelineViewer = () => {
     if (success) {
       loadTimelineData();
     }
-  }, [fromDateStr, fromTimeStr, toDateStr, toTimeStr, setDateRange, loadTimelineData]);
+  }, [fromStr, toStr, setDateRange, loadTimelineData]);
 
   const handleRetry = useCallback(() => {
     clearError();
@@ -154,37 +162,35 @@ const TimelineViewer = () => {
     switch (preset) {
       case 'today':
         from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
         break;
       case 'yesterday':
         from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 0);
         break;
       case 'thisWeek': {
         const dayOfWeek = now.getDay();
         const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday, 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
         break;
       }
       case 'last7Days':
         from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
         break;
       case 'thisMonth':
         from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
         break;
       case 'last30Days':
         from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29, 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
         break;
     }
 
-    setFromDateStr(format(from, "yyyy-MM-dd"));
-    setFromTimeStr(format(from, "HH") + ":00");
-    setToDateStr(format(to, "yyyy-MM-dd"));
-    setToTimeStr(format(to, "HH") + ":00");
+    setFromStr(toDateTimeLocal(from));
+    setToStr(toDateTimeLocal(to));
     setValidationError(null);
     const success = setDateRange({ from, to });
     if (success) {
@@ -251,63 +257,33 @@ const TimelineViewer = () => {
         {/* Custom Date Range */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-300" aria-hidden="true" />
-            <label htmlFor="from-date" className="text-sm font-medium text-gray-700 dark:text-gray-200">From:</label>
+            <label htmlFor="from-datetime" className="text-sm font-medium text-gray-700 dark:text-gray-200">From:</label>
             <input
-              id="from-date"
-              type="date"
-              value={fromDateStr}
+              id="from-datetime"
+              type="datetime-local"
+              value={fromStr}
               onChange={(e) => {
-                setFromDateStr(e.target.value);
+                setFromStr(e.target.value);
                 setValidationError(null);
               }}
-              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-36"
+              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white"
               aria-describedby={validationError ? "date-error" : undefined}
             />
-            <select
-              id="from-time"
-              value={fromTimeStr}
-              onChange={(e) => {
-                setFromTimeStr(e.target.value);
-                setValidationError(null);
-              }}
-              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-24"
-            >
-              {Array.from({ length: 24 }, (_, i) => {
-                const hour = i.toString().padStart(2, '0');
-                return <option key={hour} value={`${hour}:00`}>{hour}:00</option>;
-              })}
-            </select>
           </div>
 
           <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-300" aria-hidden="true" />
-            <label htmlFor="to-date" className="text-sm font-medium text-gray-700 dark:text-gray-200">To:</label>
+            <label htmlFor="to-datetime" className="text-sm font-medium text-gray-700 dark:text-gray-200">To:</label>
             <input
-              id="to-date"
-              type="date"
-              value={toDateStr}
+              id="to-datetime"
+              type="datetime-local"
+              value={toStr}
               onChange={(e) => {
-                setToDateStr(e.target.value);
+                setToStr(e.target.value);
                 setValidationError(null);
               }}
-              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-36"
+              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white"
               aria-describedby={validationError ? "date-error" : undefined}
             />
-            <select
-              id="to-time"
-              value={toTimeStr}
-              onChange={(e) => {
-                setToTimeStr(e.target.value);
-                setValidationError(null);
-              }}
-              className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 text-gray-900 dark:text-white w-24"
-            >
-              {Array.from({ length: 24 }, (_, i) => {
-                const hour = i.toString().padStart(2, '0');
-                return <option key={hour} value={`${hour}:00`}>{hour}:00</option>;
-              })}
-            </select>
           </div>
 
           <button

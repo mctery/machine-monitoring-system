@@ -21,6 +21,8 @@ export interface TimelineSegment {
   end: Date;
   state: MachineState;
   duration: number;
+  runHour: number;
+  stopHour: number;
 }
 
 export interface TimelineData {

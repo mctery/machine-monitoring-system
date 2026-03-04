@@ -8,6 +8,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-blue)
 ![Vite](https://img.shields.io/badge/Vite-5.4-purple)
+![Prisma](https://img.shields.io/badge/Prisma-5.22-teal)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange)
 ![Vercel](https://img.shields.io/badge/Vercel-Deployed-black)
 
@@ -24,57 +25,68 @@
 - [API Endpoints](#api-endpoints)
 - [Database Schema](#database-schema)
 - [ระบบสี](#ระบบสี)
+- [กลุ่มเครื่องจักร](#กลุ่มเครื่องจักร)
+- [การแก้ไขปัญหา](#การแก้ไขปัญหา)
 
 ---
 
 ## ฟีเจอร์หลัก
 
-### 1. Timeline Viewer (หน้าแรก)
+### 1. Timeline Viewer (หน้าแรก `/`)
 - แสดง Gantt Chart ของการทำงานเครื่องจักร
-- เลือกช่วงวันที่แบบกำหนดเอง
+- เลือกช่วงวันที่-เวลาด้วย `datetime-local` input (แม่นยำถึงนาที)
 - ปุ่ม Quick Select: Today, Yesterday, This Week, Last 7 Days, This Month, Last 30 Days
 - บันทึกช่วงวันที่ล่าสุดใน localStorage
-- Export ข้อมูลเป็น CSV
+- Export ข้อมูลเป็น CSV (UTF-8 BOM)
 - แสดงสถานะด้วยสี (RUN/STOP/REWORK)
-- Tooltip แสดงรายละเอียดเมื่อ hover
+- Tooltip แสดง Log Time, Run Hour, Stop Hour เมื่อ hover
 - จัดกลุ่มตาม Group Name
+- แสดง Actual Ratio 1/2, True Ratio 1/2, Warning Ratio
+- Timeline bar แสดงสัดส่วนตาม run_hour + stop_hour ของแต่ละ record
 
-### 2. Machine Monitoring (สถานะเครื่องจักร)
+### 2. Machine Monitoring (สถานะเครื่องจักร `/status`)
 - แสดงสถานะเครื่องจักรแบบ Real-time (อัพเดททุก 10 วินาที)
 - ตารางแบบ 2 คอลัมน์ responsive
-- แสดงสี indicator ตามสถานะ (STOP/RUN/REWORK)
+- แสดงสี indicator ตามสถานะ (RUN/STOP/REWORK)
 - คำนวณ Weekly/Monthly Actual Ratio อัตโนมัติ
+- Animation เมื่อค่าเปลี่ยน (blue pulse + slide-in)
 - กรองตาม Group
 - Dark/Light mode
 
-### 3. Machine Setup (ตั้งค่าเครื่องจักร)
-- เพิ่ม/แก้ไข/ลบเครื่องจักร
+### 3. Machine Setup (ตั้งค่าเครื่องจักร `/setup`)
+- เพิ่ม/แก้ไข/ลบเครื่องจักร (CRUD)
 - ตั้งค่า Weekly Target และ Monthly Target
 - Inline editing พร้อม validation
+- Autocomplete สำหรับ Group Name
 - กรองตาม Group
 - ยืนยันก่อนลบ
+- ปุ่ม Initialize Data สำหรับ seed ข้อมูลเริ่มต้น (60 เครื่อง)
 
-### 4. Simulation (เฉพาะ Development)
+### 4. Simulation (เฉพาะ Development `/simulation`)
 - สร้างข้อมูลจำลองสำหรับทดสอบ
+- Manual data entry + Quick Add (RUN/STOP/REWORK)
+- Batch Insert mode (กำหนด from/to + interval, preview ก่อน insert)
+- Generate 30 วันของข้อมูลทดสอบ
 - ซ่อนอัตโนมัติใน Production mode
 
 ---
 
 ## เทคโนโลยีที่ใช้
 
-| หมวด | เทคโนโลยี |
-|------|----------|
-| **Frontend** | React 18, TypeScript, Vite |
-| **Styling** | Tailwind CSS, Dark Mode |
-| **State Management** | Zustand |
-| **Animation** | Framer Motion |
-| **Table** | TanStack React Table |
-| **Icons** | Lucide React |
-| **Date** | date-fns |
-| **Database** | MySQL / TiDB Cloud |
-| **ORM** | Prisma |
-| **API** | Vercel Serverless Functions / Express.js |
-| **Hosting** | Vercel / PM2 (Local) |
+| หมวด | เทคโนโลยี | เวอร์ชัน |
+|------|----------|---------|
+| **Frontend** | React, TypeScript, Vite | 18.3, 5.5, 5.4 |
+| **Styling** | Tailwind CSS, Dark Mode (class strategy) | 3.4 |
+| **State Management** | Zustand (+ localStorage persist สำหรับ theme/dateRange) | 4.5 |
+| **Animation** | Framer Motion | 12.x |
+| **Table** | TanStack React Table | 8.21 |
+| **Icons** | Lucide React | 0.428 |
+| **Date** | date-fns | 3.6 |
+| **Database** | MySQL / TiDB Cloud | 8.0 |
+| **ORM** | Prisma (migrations/seed only, runtime ใช้ mysql2 ตรง) | 5.22 |
+| **API** | Vercel Serverless Functions / Express.js | - / 4.22 |
+| **Process Manager** | PM2 | - |
+| **Hosting** | Vercel (Cloud) / PM2 (On-premise) | - |
 
 ---
 
@@ -83,65 +95,81 @@
 ```
 machine-monitoring-system/
 │
-├── api/                        # Vercel Serverless Functions
-│   ├── health.ts               # Health check endpoint
-│   ├── machine-status.ts       # สถานะเครื่องจักร
-│   ├── machine-settings.ts     # CRUD ตั้งค่าเครื่องจักร
-│   ├── timeline-data.ts        # ข้อมูล Timeline
-│   └── timeline-segments.ts    # Segment data
+├── api/                           # Vercel Serverless Functions
+│   ├── health.ts                  # Health check endpoint
+│   ├── machine-status.ts         # สถานะเครื่องจักร (GET)
+│   ├── machine-settings.ts       # CRUD ตั้งค่าเครื่องจักร
+│   ├── machine-hours.ts          # ดึง/สร้างข้อมูลชั่วโมงเครื่อง
+│   ├── timeline-data.ts          # ข้อมูล Timeline (aggregated)
+│   ├── timeline-segments.ts      # Segment data (individual records)
+│   ├── init-settings.ts          # Initialize ข้อมูลเครื่องจักรเริ่มต้น
+│   ├── seed-hours.ts             # Generate ข้อมูลทดสอบ
+│   └── test.ts                   # Test endpoint
 │
-├── src/                        # React Frontend
-│   ├── components/             # UI Components
-│   │   ├── Header.tsx          # Navigation + Dark mode
-│   │   ├── TimelineViewer.tsx  # หน้า Timeline
-│   │   ├── MachineStatusTable.tsx  # ตารางสถานะ
-│   │   ├── MachineSetup.tsx    # หน้าตั้งค่า
-│   │   ├── SimulationPage.tsx  # หน้า Simulation (Dev only)
-│   │   ├── DataTable.tsx       # Reusable table
-│   │   ├── ErrorBoundary.tsx   # Error handling
-│   │   └── PageTransition.tsx  # Animation wrapper
+├── src/                           # React Frontend
+│   ├── components/                # UI Components
+│   │   ├── Header.tsx             # Navigation + Dark mode toggle
+│   │   ├── TimelineViewer.tsx     # หน้า Timeline (Gantt Chart)
+│   │   ├── MachineStatusTable.tsx # ตารางสถานะ Real-time
+│   │   ├── MachineSetup.tsx       # หน้าตั้งค่าเครื่องจักร
+│   │   ├── SimulationPage.tsx     # หน้า Simulation (Dev only)
+│   │   ├── DataTable.tsx          # Reusable table component (TanStack)
+│   │   ├── AnimatedCell.tsx       # Cell animation on value change
+│   │   ├── GroupFilter.tsx        # Group filtering + color legend
+│   │   ├── ErrorBoundary.tsx      # Error handling boundary
+│   │   └── PageTransition.tsx     # Animation wrapper (Framer Motion)
 │   │
-│   ├── pages/                  # Page components
+│   ├── pages/                     # Page components
 │   │   └── MachineStatusPage.tsx
 │   │
-│   ├── store/                  # Zustand State
-│   │   ├── useMachineStore.ts  # Machine data store
-│   │   └── useThemeStore.ts    # Theme store
+│   ├── store/                     # Zustand State
+│   │   ├── useMachineStore.ts     # Machine data store
+│   │   └── useThemeStore.ts       # Theme store (Dark/Light, persisted)
 │   │
-│   ├── lib/                    # Utilities
-│   │   └── api.ts              # API client
+│   ├── lib/                       # API Client
+│   │   └── api.ts                 # Frontend API calls (local datetime formatting)
 │   │
-│   ├── types/                  # TypeScript Types
+│   ├── data/                      # Mock/Seed data
+│   │   └── mockData.ts            # Mock data for development
+│   │
+│   ├── types/                     # TypeScript Types
 │   │   └── index.ts
 │   │
-│   ├── utils/                  # Helper functions
-│   │   └── helpers.ts
+│   ├── utils/                     # Helper functions
+│   │   └── helpers.ts             # Color, format, ratio utilities
 │   │
-│   ├── App.tsx                 # Main App
-│   └── main.tsx                # Entry point
+│   ├── App.tsx                    # Main App (React Router, lazy loading)
+│   └── main.tsx                   # Entry point
 │
-├── scripts/                    # Production Scripts (Windows)
-│   ├── start-production.bat    # เริ่ม server
-│   ├── stop-production.bat     # หยุด server
-│   ├── install-startup.bat     # ติดตั้ง Windows startup
-│   └── startup-service.bat     # Script สำหรับ startup
+├── scripts/                       # Production Scripts (Windows)
+│   ├── start-production.bat       # เริ่ม server
+│   ├── stop-production.bat        # หยุด server
+│   ├── install-startup.bat        # ติดตั้ง Windows startup
+│   └── startup-service.bat        # Script สำหรับ startup
 │
-├── prisma/                     # Database
-│   ├── schema.prisma           # Database schema
-│   └── seed.ts                 # Seed data
+├── prisma/                        # Database
+│   ├── schema.prisma              # Database schema
+│   └── seed.ts                    # Seed data
 │
-├── logs/                       # PM2 Logs
+├── database/                      # Database utilities
+│   └── seed.sql                   # Raw SQL seed
+├── logs/                          # PM2 Logs
+├── dist/                          # Production build output
 │
-├── server.cjs                  # Express Production Server
-├── ecosystem.config.cjs        # PM2 Configuration
-├── vercel.json                 # Vercel Configuration
+├── server.cjs                     # Express Production Server (Port 8000)
+├── ecosystem.config.cjs           # PM2 Configuration
+├── vercel.json                    # Vercel Configuration
+├── vite.config.ts                 # Vite build configuration
+├── SETUP.md                       # Setup guide (ภาษาไทย)
 ├── package.json
-└── .env.local                  # Environment Variables (git ignored)
+└── .env.local                     # Environment Variables (git ignored)
 ```
 
 ---
 
 ## การติดตั้ง
+
+> ดูรายละเอียดการติดตั้งแบบเต็มได้ที่ [SETUP.md](SETUP.md)
 
 ### ความต้องการระบบ
 - Node.js 18+
@@ -175,10 +203,16 @@ DB_PORT=3306
 DB_USER=your-username
 DB_PASSWORD=your-password
 DB_NAME=your-database
-DB_SSL=true   # ใส่ true ถ้าใช้ TiDB Cloud
+DB_SSL=false           # ใส่ true ถ้าใช้ TiDB Cloud
 
-# Optional
-DATABASE_URL="mysql://user:password@host:port/database"
+# Prisma Database URL (for db:push, db:seed)
+DATABASE_URL=mysql://user:password@host:port/database
+
+# Frontend API URL (optional)
+VITE_API_URL=/api
+
+# Production Server Port (optional, default: 3000)
+PORT=3000
 ```
 
 ### Database Setup
@@ -204,23 +238,22 @@ npm run db:studio
 # วิธีที่ 1: รันผ่าน Vercel CLI (แนะนำ - รวม API)
 npm run dev:vercel
 
-# วิธีที่ 2: รันเฉพาะ Frontend
+# วิธีที่ 2: รันเฉพาะ Frontend (port 5000, proxy API ไป localhost:3000)
 npm run dev
 ```
-
-เปิด browser ที่: **http://localhost:3000**
 
 ### Scripts ที่มี
 
 | คำสั่ง | คำอธิบาย |
 |--------|----------|
-| `npm run dev` | รัน Vite dev server (Frontend only) |
+| `npm run dev` | รัน Vite dev server (Frontend only, port 5000) |
 | `npm run dev:vercel` | รัน Vercel dev (Frontend + API) |
-| `npm run build` | Build สำหรับ production (รวม Prisma generate) |
+| `npm run build` | Build สำหรับ production (Prisma generate + TypeScript + Vite) |
 | `npm run preview` | Preview production build |
 | `npm run start` | รัน Express production server |
-| `npm run start:pm2` | รันผ่าน PM2 |
+| `npm run start:pm2` | รันผ่าน PM2 (Port 8000) |
 | `npm run stop:pm2` | หยุด PM2 |
+| `npm run restart:pm2` | Restart PM2 |
 | `npm run logs:pm2` | ดู PM2 logs |
 | `npm run db:push` | Push Prisma schema |
 | `npm run db:seed` | Seed ข้อมูลตัวอย่าง |
@@ -243,7 +276,14 @@ vercel
 # Settings > Environment Variables
 ```
 
-### วิธีที่ 2: PM2 (Local Production)
+**Vercel Config:**
+- API Memory: 256MB per function
+- Max Duration: 10 seconds per function
+- SPA Fallback: enabled
+
+### วิธีที่ 2: PM2 (On-premise Production)
+
+**Production Port: 8000**
 
 #### รันแบบ Manual
 
@@ -251,10 +291,10 @@ vercel
 # Build (Prisma generate + TypeScript + Vite)
 npm run build
 
-# รัน server
+# รัน server (ใช้ PORT จาก .env.local หรือ default 3000)
 npm start
 
-# หรือใช้ PM2
+# หรือใช้ PM2 (Port 8000 ตาม ecosystem.config.cjs)
 npm run start:pm2
 ```
 
@@ -282,6 +322,18 @@ Script จะทำการ:
 4. Start server
 5. บันทึก process list สำหรับ auto-start
 
+#### PM2 Configuration
+
+| ค่า | รายละเอียด |
+|-----|-----------|
+| Port | 8000 |
+| Mode | fork (1 instance) |
+| Max Memory | 500MB (restart เมื่อเกิน) |
+| Auto Restart | enabled (max 10 ครั้ง, delay 5s) |
+| Logs | `./logs/pm2-error.log`, `./logs/pm2-out.log` |
+| Kill Timeout | 5000ms |
+| Listen Timeout | 10000ms |
+
 #### คำสั่ง PM2 ที่ใช้บ่อย
 
 | คำสั่ง | คำอธิบาย |
@@ -296,6 +348,12 @@ Script จะทำการ:
 
 ## API Endpoints
 
+ระบบมี Dual API architecture:
+- **Vercel Serverless** (`api/*.ts`) — สำหรับ Vercel deployment
+- **Express** (`server.cjs`) — สำหรับ on-premise/PM2 production
+
+ทั้งสองใช้ `mysql2/promise` query ตรงไปที่ MySQL
+
 ### GET /api/health
 ตรวจสอบสถานะ server และ database
 
@@ -304,12 +362,12 @@ Script จะทำการ:
 {
   "status": "healthy",
   "database": "connected",
-  "timestamp": "2025-01-06T12:00:00.000Z"
+  "timestamp": "2026-01-06T12:00:00.000Z"
 }
 ```
 
 ### GET /api/machine-status
-ดึงข้อมูลสถานะเครื่องจักรทั้งหมด
+ดึงข้อมูลสถานะเครื่องจักรทั้งหมด พร้อมคำนวณ Weekly/Monthly Ratio
 
 **Response:**
 ```json
@@ -319,60 +377,108 @@ Script จะทำการ:
       "id": 1,
       "machineName": "3G Laser 1",
       "groupName": "3G",
-      "weeklyTarget": 80,
-      "monthlyTarget": 80,
+      "weeklyTarget": 50,
+      "monthlyTarget": 50,
       "runHour": 6.5,
       "stopHour": 1.5,
       "runStatus": 1,
       "stopStatus": 0,
-      "reworkStatus": 0,
+      "reworkStatus": null,
+      "logTime": "2026-01-06T12:00:00.000Z",
       "weeklyActualRatio": 81.25,
       "monthlyActualRatio": 79.50
     }
   ],
-  "groups": ["3G", "BLADE", "PIS"],
+  "groups": ["3G", "BLADE", "PIS", "SECTOR", "SECTOR (TR)", "SIDE MOLD"],
   "count": 60
 }
 ```
 
-### GET /api/timeline-data
-ดึงข้อมูล Timeline ตามช่วงเวลา
+**การคำนวณ Ratio:**
+- Weekly: คำนวณจากวันจันทร์ถึงปัจจุบัน = `(sum_run_hour / (sum_run_hour + sum_stop_hour)) * 100`
+- Monthly: คำนวณจากวันที่ 1 ของเดือนถึงปัจจุบัน
+
+### GET /api/machine-hours
+ดึงข้อมูล machine_hours records
 
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| from | ISO date | วันที่เริ่มต้น |
-| to | ISO date | วันที่สิ้นสุด |
+| machine | string | ชื่อเครื่องจักร (filter) |
+| from | datetime string | วันที่เริ่มต้น |
+| to | datetime string | วันที่สิ้นสุด |
+| limit | number | จำนวน records สูงสุด (default: 100, max: 1000) |
+
+### POST /api/machine-hours
+สร้าง machine hour record ใหม่
+
+**Body:**
+```json
+{
+  "logTime": "2026-01-06 12:00:00",
+  "machineName": "3G Laser 1",
+  "runHour": 6.5,
+  "stopHour": 1.5,
+  "runStatus": 1,
+  "stopStatus": 0,
+  "reworkStatus": null
+}
+```
+
+### GET /api/timeline-data
+ดึงข้อมูล Timeline แบบ aggregated ตามช่วงเวลา
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| from | datetime string | วันที่-เวลาเริ่มต้น (format: `YYYY-MM-DD HH:mm:ss` หรือ ISO) |
+| to | datetime string | วันที่-เวลาสิ้นสุด |
 
 ### GET /api/timeline-segments
-ดึงข้อมูล segment สำหรับ Timeline
+ดึงข้อมูล segment (individual machine_hours records) สำหรับ Timeline visualization
 
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| from | ISO date | วันที่เริ่มต้น |
-| to | ISO date | วันที่สิ้นสุด |
+| from | datetime string | วันที่-เวลาเริ่มต้น (format: `YYYY-MM-DD HH:mm:ss` หรือ ISO) |
+| to | datetime string | วันที่-เวลาสิ้นสุด |
 
 ### GET/POST/PUT/DELETE /api/machine-settings
 CRUD สำหรับตั้งค่าเครื่องจักร
+
+| Method | คำอธิบาย | Parameters |
+|--------|----------|------------|
+| GET | ดึงรายการเครื่องจักรทั้งหมด | `group` (optional filter) |
+| POST | เพิ่มเครื่องจักรใหม่ | Body: `machineName`, `groupName`, `weeklyTarget?`, `monthlyTarget?` |
+| PUT | แก้ไขเครื่องจักร | Vercel: Query `id` / Express: Body `id` |
+| DELETE | ลบเครื่องจักร | Vercel: Query `id` / Express: Body `id` |
+
+### POST /api/init-settings
+Initialize machine_settings ด้วยข้อมูลเครื่องจักรเริ่มต้น (60 เครื่อง, 6 กลุ่ม)
+
+### GET /api/seed-hours
+Generate ข้อมูลทดสอบ 30 วันย้อนหลัง (ลบข้อมูลเดิมก่อน, สำหรับ development)
+
+### GET /api/test
+ตรวจสอบ connectivity และการตั้งค่า environment variables
 
 ---
 
 ## Database Schema
 
 ### ตาราง machine_hours
-เก็บข้อมูลชั่วโมงการทำงานของเครื่องจักร (บันทึกทุก 10 นาที)
+เก็บข้อมูลชั่วโมงการทำงานของเครื่องจักร (บันทึกจาก PLC ทุกๆ interval)
 
 ```sql
 CREATE TABLE machine_hours (
   id INT AUTO_INCREMENT PRIMARY KEY,
   log_time DATETIME NOT NULL,
   machine_name VARCHAR(50) NOT NULL,
-  run_hour DECIMAL(10,2) NOT NULL,
-  stop_hour DECIMAL(10,2) NOT NULL,
+  run_hour FLOAT NOT NULL,
+  stop_hour FLOAT NOT NULL,
   run_status TINYINT NOT NULL,      -- 1 = Running, 0 = Stopped
   stop_status TINYINT NOT NULL,
-  rework_status INT NULL,           -- 1 = Rework
+  rework_status INT NULL,           -- 1 = Rework active, NULL = no rework
   INDEX idx_machine_time (machine_name, log_time)
 );
 ```
@@ -388,8 +494,30 @@ CREATE TABLE machine_settings (
   weekly_target DECIMAL(5,2) DEFAULT 80.00,
   monthly_target DECIMAL(5,2) DEFAULT 80.00,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_machine_name (machine_name),
+  INDEX idx_group_name (group_name)
 );
+```
+
+### Data Flow
+
+```
+MySQL DB (machine_hours + machine_settings)
+    │
+    │  mysql2/promise (direct queries)
+    ▼
+API Layer (server.cjs หรือ api/*.ts)
+    │
+    │  HTTP JSON responses
+    ▼
+src/lib/api.ts (fetch wrapper, local datetime formatting)
+    │
+    ▼
+useMachineStore.ts (Zustand)
+    │  mapStatusToMachine() / mapToTimelineData() / buildTimelineSegments()
+    ▼
+React Components (TanStack Table, Framer Motion, Tailwind CSS)
 ```
 
 ---
@@ -397,31 +525,44 @@ CREATE TABLE machine_settings (
 ## ระบบสี
 
 ### สถานะเครื่องจักร
-| สถานะ | สี | คำอธิบาย |
-|-------|-----|----------|
-| RUN | เขียว | เครื่องกำลังทำงาน |
-| STOP | เหลือง | เครื่องหยุด |
-| REWORK | ส้ม | กำลัง Rework |
+| สถานะ | สี (ตาราง) | สี (Timeline Bar) | คำอธิบาย |
+|-------|------------|-------------------|----------|
+| **RUN** | เหลือง `bg-yellow-300` | เหลือง `bg-yellow-500` | เครื่องกำลังทำงาน |
+| **STOP** | เขียว `bg-green-400` | เขียว `bg-green-500` | เครื่องหยุด |
+| **REWORK** | แดง `bg-red-500` | แดง `bg-red-500` | กำลัง Rework |
+| **IDLE** | เทา/ฟ้า `bg-gray-300` | ฟ้า `bg-cyan-400` | ไม่มีข้อมูล |
 
-### Performance Indicators
-| ระดับ | สี | เงื่อนไข |
-|-------|-----|----------|
-| Good | ขาว/เขียว | >= 80% ของ target |
-| Warning | เหลือง | 50-80% ของ target |
-| Critical | แดง | < 50% ของ target |
+### Performance Indicators (Ratio Cell Colors)
+| ระดับ | ช่วง | สี (Light/Dark) | คำอธิบาย |
+|-------|------|-----------------|----------|
+| Excellent | 91-100% | ขาว `bg-white` / `bg-slate-300` | ผลงานดีเยี่ยม |
+| Good | 76-90% | แดงอ่อน `bg-red-200` / `bg-red-400` | ผลงานดี |
+| Average | 51-75% | แดงปานกลาง `bg-red-300` / `bg-red-500` | ปานกลาง |
+| Warning | 26-50% | แดงเข้ม `bg-red-400` / `bg-red-600` | ต่ำกว่าเป้า |
+| Critical | 0-25% | แดงเข้มมาก `bg-red-600` / `bg-red-700` | วิกฤต |
+
+### Status Indicator (Machine Status Page)
+| เงื่อนไข | สี | คำอธิบาย |
+|----------|-----|----------|
+| actual/target >= 80% | เขียว `bg-green-500` | ได้เป้า |
+| actual/target >= 50% | เหลือง `bg-yellow-500` | ใกล้เป้า |
+| actual/target < 50% | แดง `bg-red-500` | ต่ำกว่าเป้ามาก |
 
 ---
 
 ## กลุ่มเครื่องจักร
 
-| กลุ่ม | เครื่องจักร |
-|-------|------------|
-| 3G | 3G Laser 1-4, Model No.7 |
-| BLADE | Laser 1-2 |
-| PIS | Laser High Contrast, Model 1-5 |
-| SECTOR | SECTOR 1-20 |
-| SECTOR (TR) | SECTOR 21-40 |
-| SIDE MOLD | Letter 1-4 |
+| กลุ่ม | จำนวน | เครื่องจักร |
+|-------|-------|------------|
+| PIS | 26 | Model 1-6, PIS Casting, Side piece 1-14, NC Lathe 1-5 |
+| 3G | 3 | 3G Laser 1-3 |
+| SECTOR | 8 | Turning 1-3, 8, Machining 3-4, 9-10 |
+| SECTOR (TR) | 5 | Machining 1, 7-8, Turning 4, 9 |
+| SIDE MOLD | 16 | Machining 2, 5-6, Turning 5, 7, Letter 1-11 |
+| BLADE | 2 | Laser 1-2 |
+| **รวม** | **60** | |
+
+**Default Targets:** Weekly = 50%, Monthly = 50%
 
 ---
 
@@ -433,8 +574,17 @@ Error: ER_UNKNOWN_ERROR
 ```
 **วิธีแก้:** ตรวจสอบว่าได้ตั้งค่า `DB_SSL=true` ใน `.env.local` (สำหรับ TiDB Cloud)
 
+### ปัญหา: Self-signed Certificate Error
+**วิธีแก้:** ระบบรองรับ self-signed certificates ผ่าน `ssl: { rejectUnauthorized: false }` โดยอัตโนมัติเมื่อ `DB_SSL=true`
+
 ### ปัญหา: NaN แสดงในตาราง
 **วิธีแก้:** ตรวจสอบว่า database มีข้อมูลในช่วงวันที่ที่เลือก
+
+### ปัญหา: Timeline ข้อมูลไม่ตรงกับ Database
+**วิธีแก้:**
+- ตรวจสอบว่า Timezone ของ server และ database ตรงกัน
+- ระบบส่ง local datetime strings (`YYYY-MM-DD HH:mm:ss`) โดยไม่แปลงเป็น UTC
+- ตรวจสอบช่วงเวลาที่เลือกใน datetime-local input ว่าครอบคลุมข้อมูลที่ต้องการ
 
 ### ปัญหา: PM2 ไม่เริ่มทำงาน
 ```bash
@@ -443,11 +593,53 @@ pm2 kill
 pm2 start ecosystem.config.cjs
 ```
 
+### ปัญหา: Prisma Client ไม่ถูก generate
+```bash
+# Generate Prisma Client ใหม่
+npx prisma generate
+
+# หรือ build ใหม่ (รวม prisma generate)
+npm run build
+```
+
+### ปัญหา: Port 8000 ถูกใช้อยู่
+```bash
+# หา process ที่ใช้ port 8000
+netstat -ano | findstr :8000
+
+# หยุด PM2 ทั้งหมด
+pm2 kill
+```
+
+---
+
+## Changelog
+
+### v2.2.0
+- แก้ไข Timeline Viewer: เปลี่ยน date picker เป็น `datetime-local` (แม่นยำถึงนาที)
+- แก้ไข Timezone: ส่ง local datetime strings แทน UTC เพื่อให้ตรงกับ database
+- แก้ไข Timeline segments: แสดง run_hour/stop_hour จริงจาก database
+- แก้ไข Timeline bar: ใช้ run_hour + stop_hour เป็น weight สำหรับสัดส่วนแถบ
+- แก้ไข Tooltip: แสดง Log Time, Run Hour, Stop Hour ที่ตรงกับ database
+- ปรับปรุง API: รองรับ local datetime format (`YYYY-MM-DD HH:mm:ss`)
+- เพิ่ม SETUP.md สำหรับ guide การติดตั้ง
+
+### v2.1.0
+- ปรับปรุง README ให้ตรงกับระบบจริง
+- แก้ไขข้อมูลกลุ่มเครื่องจักรและจำนวนเครื่อง
+- เพิ่ม metadata ใน package.json
+
+### v2.0.0
+- เปลี่ยนจาก Prisma runtime เป็น mysql2 direct queries
+- เพิ่ม Express production server (server.cjs)
+- เพิ่ม PM2 configuration
+- เพิ่ม Windows startup scripts
+
 ---
 
 ## License
 
-Copyright 2024-2025 True Mold (Thailand) Co., Ltd. (Bridgestone Group)
+Copyright 2024-2026 True Mold (Thailand) Co., Ltd. (Bridgestone Group)
 
 ## ผู้พัฒนา
 

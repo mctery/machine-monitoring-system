@@ -21,45 +21,44 @@ const mapStatusToMachine = (data: MachineStatusData): Machine => ({
 // Build timeline segments from individual machine_hours records
 const buildTimelineSegments = (
   segments: TimelineSegmentData[],
-  machineName: string
+  machineName: string,
+  rangeEnd: Date
 ): TimelineSegment[] => {
   const machineSegments = segments
     .filter(s => s.machineName === machineName)
     .sort((a, b) => new Date(a.logTime).getTime() - new Date(b.logTime).getTime());
 
   const timeline: TimelineSegment[] = [];
-  const INTERVAL_MS = 10 * 60 * 1000; // 10 minutes default interval
 
   for (let i = 0; i < machineSegments.length; i++) {
     const segment = machineSegments[i];
     const logTime = new Date(segment.logTime);
 
-    // Calculate end time: use next record's logTime or add 10 minutes for the last record
+    // Calculate end time: use next record's logTime, or rangeEnd for the last record
     const nextLogTime = i < machineSegments.length - 1
       ? new Date(machineSegments[i + 1].logTime)
-      : new Date(logTime.getTime() + INTERVAL_MS);
+      : rangeEnd;
 
     // Determine state based on run_status/stop_status
     const state: 'RUN' | 'STOP' | 'REWORK' = segment.runStatus === 1
       ? (segment.reworkStatus === 1 ? 'REWORK' : 'RUN')
       : 'STOP';
 
-    // Get duration from actual database values based on state
-    let duration: number;
-    if (state === 'RUN') {
-      duration = segment.runHour || 0;
-    } else if (state === 'STOP') {
-      duration = segment.stopHour || 0;
-    } else {
-      // REWORK: use whichever has data
-      duration = segment.runHour || segment.stopHour || 0;
-    }
+    // Store actual DB values for display
+    const runHour = segment.runHour || 0;
+    const stopHour = segment.stopHour || 0;
+
+    // Use run_hour + stop_hour as weight for bar width proportion
+    // Fallback to 1 to ensure the segment is visible
+    const duration = (runHour + stopHour) || 1;
 
     timeline.push({
       start: logTime,
       end: nextLogTime,
       state,
-      duration
+      duration,
+      runHour,
+      stopHour
     });
   }
 
@@ -70,7 +69,8 @@ const buildTimelineSegments = (
 const mapToTimelineData = (
   data: TimelineApiData,
   groupAverages: Map<string, { avgActualRatio1: number; avgTrueRatio1: number }>,
-  segments: TimelineSegmentData[]
+  segments: TimelineSegmentData[],
+  rangeEnd: Date
 ): TimelineData => {
   // Warning hours not available in database - set to 0
   const warningHours = 0;
@@ -79,7 +79,7 @@ const mapToTimelineData = (
   const groupAvg = groupAverages.get(data.groupName) || { avgActualRatio1: 0, avgTrueRatio1: 0 };
 
   // Build timeline from actual segments data
-  let timeline = buildTimelineSegments(segments, data.machineName);
+  let timeline = buildTimelineSegments(segments, data.machineName, rangeEnd);
 
   // Use aggregated RUN/STOP values from API
   const totalRun = data.runHour || 0;
@@ -93,7 +93,9 @@ const mapToTimelineData = (
         start: now,
         end: now,
         state: 'RUN',
-        duration: totalRun
+        duration: totalRun,
+        runHour: totalRun,
+        stopHour: 0
       });
     }
     if (totalStop > 0) {
@@ -101,7 +103,9 @@ const mapToTimelineData = (
         start: now,
         end: now,
         state: 'STOP',
-        duration: totalStop
+        duration: totalStop,
+        runHour: 0,
+        stopHour: totalStop
       });
     }
   }
@@ -278,7 +282,7 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
       }
 
       // Convert to TimelineData type with group averages and real segments
-      const timelineData = data.map(d => mapToTimelineData(d, groupAverages, segments));
+      const timelineData = data.map(d => mapToTimelineData(d, groupAverages, segments, dateRange.to));
       set({ timelineData, isLoading: false });
     } catch (error) {
       console.error('Failed to load timeline data:', error);

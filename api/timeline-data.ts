@@ -45,15 +45,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     connection = await getConnection();
 
-    const fromDate = new Date(from as string);
-    const toDate = new Date(to as string);
+    // Accept date strings directly to avoid timezone conversion issues
+    // Supports both "YYYY-MM-DD HH:mm:ss" (local) and ISO format
+    const fromRaw = (from as string).trim();
+    const toRaw = (to as string).trim();
 
-    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-      return res.status(400).json({ error: 'Invalid date format' });
+    // If already in "YYYY-MM-DD HH:mm:ss" format, use directly
+    // Otherwise parse as Date and format
+    const dateTimeRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+    let fromStr: string;
+    let toStr: string;
+
+    if (dateTimeRegex.test(fromRaw)) {
+      fromStr = fromRaw;
+    } else {
+      const fromDate = new Date(fromRaw);
+      if (isNaN(fromDate.getTime())) {
+        return res.status(400).json({ error: 'Invalid from date format' });
+      }
+      fromStr = fromDate.toISOString().slice(0, 19).replace('T', ' ');
     }
 
-    const fromStr = fromDate.toISOString().slice(0, 19).replace('T', ' ');
-    const toStr = toDate.toISOString().slice(0, 19).replace('T', ' ');
+    if (dateTimeRegex.test(toRaw)) {
+      toStr = toRaw;
+    } else {
+      const toDate = new Date(toRaw);
+      if (isNaN(toDate.getTime())) {
+        return res.status(400).json({ error: 'Invalid to date format' });
+      }
+      toStr = toDate.toISOString().slice(0, 19).replace('T', ' ');
+    }
 
     // Get timeline data with date range filter
     // Join machine_hours with machine_settings to get group and target info

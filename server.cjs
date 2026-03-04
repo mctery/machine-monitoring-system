@@ -235,6 +235,17 @@ app.delete('/api/machine-settings', async (req, res) => {
   }
 });
 
+// Helper: parse date param - use directly if already in "YYYY-MM-DD HH:mm:ss" format
+function parseDateParam(raw) {
+  const str = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(str)) {
+    return str;
+  }
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 // Timeline Data
 app.get('/api/timeline-data', async (req, res) => {
   let connection;
@@ -245,8 +256,11 @@ app.get('/api/timeline-data', async (req, res) => {
     }
 
     connection = await getConnection();
-    const fromDate = new Date(from).toISOString().slice(0, 19).replace('T', ' ');
-    const toDate = new Date(to).toISOString().slice(0, 19).replace('T', ' ');
+    const fromDate = parseDateParam(from);
+    const toDate = parseDateParam(to);
+    if (!fromDate || !toDate) {
+      return res.status(400).json({ error: 'Invalid date format' });
+    }
 
     const sql = `
       WITH range_stats AS (
@@ -310,8 +324,11 @@ app.get('/api/timeline-segments', async (req, res) => {
     }
 
     connection = await getConnection();
-    const fromDate = new Date(from).toISOString().slice(0, 19).replace('T', ' ');
-    const toDate = new Date(to).toISOString().slice(0, 19).replace('T', ' ');
+    const fromDate = parseDateParam(from);
+    const toDate = parseDateParam(to);
+    if (!fromDate || !toDate) {
+      return res.status(400).json({ error: 'Invalid date format' });
+    }
 
     const sql = `
       SELECT
