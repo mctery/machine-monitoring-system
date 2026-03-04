@@ -25,6 +25,8 @@ interface BatchConfig {
   intervalUnit: 'seconds' | 'minutes' | 'hours';
   allMachines: boolean;
   fillGaps: boolean;
+  randomGaps: boolean;
+  gapPercent: number; // 0-100, percentage of slots to skip
 }
 
 type Message = { type: 'error' | 'success'; text: string } | null;
@@ -107,6 +109,8 @@ const SimulationPage = () => {
     intervalUnit: 'hours',
     allMachines: true,
     fillGaps: false,
+    randomGaps: false,
+    gapPercent: 30,
   });
   const [batchPreview, setBatchPreview] = useState<BatchEntry[]>([]);
   const [isBatchInserting, setIsBatchInserting] = useState(false);
@@ -222,6 +226,29 @@ const SimulationPage = () => {
     }
 
     const totalSlots = allEntries.length;
+
+    // Random Gaps mode: randomly skip some time slots to create gaps
+    if (batchConfig.randomGaps && !batchConfig.fillGaps) {
+      const skipRate = batchConfig.gapPercent / 100;
+      // Group entries by time slot, skip entire time slots (all machines at once)
+      const timeSlots = new Map<number, BatchEntry[]>();
+      for (const entry of allEntries) {
+        const key = entry.logTime.getTime();
+        if (!timeSlots.has(key)) timeSlots.set(key, []);
+        timeSlots.get(key)!.push(entry);
+      }
+      const filtered: BatchEntry[] = [];
+      for (const [, entries] of timeSlots) {
+        if (Math.random() >= skipRate) {
+          filtered.push(...entries);
+        }
+      }
+      const skipped = totalSlots - filtered.length;
+      setBatchPreview(filtered);
+      const label = batchConfig.allMachines ? `${targetMachines.length} machines` : targetMachines[0];
+      setMessage({ type: 'success', text: `Generated ${filtered.length} entries for ${label} (${skipped} skipped as random gaps, ~${batchConfig.gapPercent}%)` });
+      return;
+    }
 
     // Fill Gaps mode: filter out slots that already have data
     if (batchConfig.fillGaps) {
@@ -573,6 +600,46 @@ const SimulationPage = () => {
                           <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-lg">
                             Only generates data for time slots without existing records
                           </div>
+                        )}
+
+                        {/* Random Gaps Toggle */}
+                        {!batchConfig.fillGaps && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <Shuffle className="w-3.5 h-3.5 text-gray-400" />
+                                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Random Gaps</span>
+                              </div>
+                              <div
+                                className="flex items-center gap-2 cursor-pointer select-none"
+                                onClick={() => updateBatch({ randomGaps: !batchConfig.randomGaps })}
+                              >
+                                <span className={`text-xs font-medium ${!batchConfig.randomGaps ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400'}`}>Off</span>
+                                <div className={`relative w-10 h-5 rounded-full transition-all ${batchConfig.randomGaps ? 'bg-purple-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${batchConfig.randomGaps ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                </div>
+                                <span className={`text-xs font-medium ${batchConfig.randomGaps ? 'text-purple-500 dark:text-purple-400' : 'text-gray-400'}`}>On</span>
+                              </div>
+                            </div>
+
+                            {batchConfig.randomGaps && (
+                              <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-purple-600 dark:text-purple-400">Gap ratio</span>
+                                  <span className="text-xs font-mono font-semibold text-purple-600 dark:text-purple-400">{batchConfig.gapPercent}%</span>
+                                </div>
+                                <input
+                                  type="range" min="5" max="80" step="5"
+                                  value={batchConfig.gapPercent}
+                                  onChange={(e) => updateBatch({ gapPercent: parseInt(e.target.value) })}
+                                  className="w-full h-1.5 bg-purple-200 dark:bg-purple-900/40 rounded-full appearance-none cursor-pointer accent-purple-500"
+                                />
+                                <div className="text-xs text-purple-500 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 rounded-lg">
+                                  Randomly skips ~{batchConfig.gapPercent}% of time slots to create gaps
+                                </div>
+                              </div>
+                            )}
+                          </>
                         )}
 
                         {/* Date Range */}
