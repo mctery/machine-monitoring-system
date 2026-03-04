@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import mysql from 'mysql2/promise';
+import { getConnection, setCORS, errorMessage, DEFAULT_QUERY_LIMIT, MAX_QUERY_LIMIT } from './_db';
 
 interface MachineHoursRow {
   id: number;
@@ -12,34 +13,10 @@ interface MachineHoursRow {
   rework_status: number | null;
 }
 
-function validateEnvVars() {
-  const required = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
-  const missing = required.filter(key => !process.env[key]);
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
-}
-
-async function getConnection() {
-  validateEnvVars();
-  return mysql.createConnection({
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT!),
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined
-  });
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCORS(res, 'GET, POST, DELETE, OPTIONS');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   let connection;
   try {
@@ -50,24 +27,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return await getMachineHours(req, res, connection);
       case 'POST':
         return await createMachineHours(req, res, connection);
+      case 'DELETE':
+        return await deleteMachineHours(req, res, connection);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (error) {
     console.error('API Error:', error);
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return res.status(500).json({ error: 'Internal server error', message: errorMessage(error) });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    if (connection) await connection.end();
   }
 }
 
 async function getMachineHours(req: VercelRequest, res: VercelResponse, connection: mysql.Connection) {
-  const { machine, from, to, limit = '100' } = req.query;
+  const { machine, from, to, limit = String(DEFAULT_QUERY_LIMIT) } = req.query;
 
   let sql = 'SELECT * FROM machine_hours WHERE 1=1';
   const params: (string | number)[] = [];
@@ -87,7 +61,7 @@ async function getMachineHours(req: VercelRequest, res: VercelResponse, connecti
     params.push(String(to));
   }
 
-  const limitNum = Math.min(Number(limit), 1000);
+  const limitNum = Math.min(Number(limit), MAX_QUERY_LIMIT);
   sql += ` ORDER BY log_time DESC LIMIT ${limitNum}`;
 
   const [rows] = await connection.execute(sql, params);
@@ -134,4 +108,28 @@ async function createMachineHours(req: VercelRequest, res: VercelResponse, conne
     message: 'Created',
     data: { id: (result as { insertId: number }).insertId, logTime, machineName, runHour, stopHour, runStatus, stopStatus, reworkStatus }
   });
+}
+
+async function deleteMachineHours(req: VercelRequest, res: VercelResponse, connection: mysql.Connection) {
+  const { id, all } = req.query;
+
+  // Delete all entries
+  if (all === 'true') {
+    const [result] = await connection.execute('DELETE FROM machine_hours');
+    const affected = (result as { affectedRows: number }).affectedRows;
+    return res.status(200).json({ message: `Deleted ${affected} entries`, count: affected });
+  }
+
+  if (!id) {
+    return res.status(400).json({ error: 'id or all=true is required' });
+  }
+
+  const [result] = await connection.execute('DELETE FROM machine_hours WHERE id = ?', [Number(id)]);
+  const affected = (result as { affectedRows: number }).affectedRows;
+
+  if (affected === 0) {
+    return res.status(404).json({ error: 'Entry not found' });
+  }
+
+  return res.status(200).json({ message: 'Deleted' });
 }

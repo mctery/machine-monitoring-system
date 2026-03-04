@@ -1,76 +1,25 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import mysql from 'mysql2/promise';
-
-function validateEnvVars() {
-  const required = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
-  const missing = required.filter(key => !process.env[key]);
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
-}
-
-async function getConnection() {
-  validateEnvVars();
-  return mysql.createConnection({
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT!),
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined
-  });
-}
+import { getConnection, setCORS, parseDateParam, errorMessage } from './_db';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCORS(res);
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const { from, to } = req.query;
-
   if (!from || !to) {
     return res.status(400).json({ error: 'Missing required parameters: from, to' });
   }
 
+  const fromStr = parseDateParam(from as string);
+  const toStr = parseDateParam(to as string);
+  if (!fromStr) return res.status(400).json({ error: 'Invalid from date format' });
+  if (!toStr) return res.status(400).json({ error: 'Invalid to date format' });
+
   let connection;
   try {
     connection = await getConnection();
-
-    // Accept date strings directly to avoid timezone conversion issues
-    const fromRaw = (from as string).trim();
-    const toRaw = (to as string).trim();
-
-    const dateTimeRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
-    let fromStr: string;
-    let toStr: string;
-
-    if (dateTimeRegex.test(fromRaw)) {
-      fromStr = fromRaw;
-    } else {
-      const fromDate = new Date(fromRaw);
-      if (isNaN(fromDate.getTime())) {
-        return res.status(400).json({ error: 'Invalid from date format' });
-      }
-      fromStr = fromDate.toISOString().slice(0, 19).replace('T', ' ');
-    }
-
-    if (dateTimeRegex.test(toRaw)) {
-      toStr = toRaw;
-    } else {
-      const toDate = new Date(toRaw);
-      if (isNaN(toDate.getTime())) {
-        return res.status(400).json({ error: 'Invalid to date format' });
-      }
-      toStr = toDate.toISOString().slice(0, 19).replace('T', ' ');
-    }
 
     // Get individual machine_hours records for timeline segments
     const sql = `
@@ -122,13 +71,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error) {
     console.error('API Error:', error);
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return res.status(500).json({ error: 'Internal server error', message: errorMessage(error) });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    if (connection) await connection.end();
   }
 }

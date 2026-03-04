@@ -375,10 +375,14 @@ const MachineSetup = () => {
     loadData();
   }, [loadData]);
 
-  // Filter settings by group
+  // Filter and sort settings by group, then machine name (natural sort)
   const filteredSettings = useMemo(() => {
-    if (selectedGroup === 'All') return settings;
-    return settings.filter(s => s.groupName === selectedGroup);
+    const filtered = selectedGroup === 'All' ? settings : settings.filter(s => s.groupName === selectedGroup);
+    return [...filtered].sort((a, b) => {
+      const groupCmp = a.groupName.localeCompare(b.groupName);
+      if (groupCmp !== 0) return groupCmp;
+      return a.machineName.localeCompare(b.machineName, undefined, { numeric: true });
+    });
   }, [settings, selectedGroup]);
 
   // Inline edit handlers

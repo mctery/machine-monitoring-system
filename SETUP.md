@@ -54,9 +54,6 @@ DB_PASSWORD=your_password
 DB_PORT=3306
 DB_SSL=true          # ใส่ true ถ้าใช้ TiDB Cloud หรือ SSL
 
-# สำหรับ Prisma (ใช้ตอน db:push, db:seed)
-DATABASE_URL=mysql://user:password@host:port/database?sslaccept=strict
-
 # Frontend (ปกติไม่ต้องแก้)
 VITE_API_URL=/api
 ```
@@ -69,8 +66,6 @@ DB_USER=abc123.root
 DB_PASSWORD=yourpassword
 DB_PORT=4000
 DB_SSL=true
-
-DATABASE_URL=mysql://abc123.root:yourpassword@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/plc_log?sslaccept=strict
 ```
 
 #### ตัวอย่าง: MySQL localhost
@@ -81,8 +76,6 @@ DB_USER=root
 DB_PASSWORD=yourpassword
 DB_PORT=3306
 DB_SSL=false
-
-DATABASE_URL=mysql://root:yourpassword@localhost:3306/plc_log
 ```
 
 ---
@@ -98,7 +91,7 @@ CREATE DATABASE plc_log;
 
 ### 3.2 สร้างตาราง
 ```bash
-npm run db:push
+npm run db:setup
 ```
 คำสั่งนี้จะสร้างตาราง `machine_hours` และ `machine_settings` ให้อัตโนมัติ
 
@@ -206,9 +199,8 @@ pm2 startup
 | `npm run start:pm2` | รัน Production ด้วย PM2 |
 | `npm run stop:pm2` | หยุด PM2 server |
 | `npm run logs:pm2` | ดู logs ของ PM2 |
-| `npm run db:push` | สร้าง/อัพเดทตาราง |
+| `npm run db:setup` | สร้างตาราง database |
 | `npm run db:seed` | ใส่ข้อมูลตัวอย่าง |
-| `npm run db:studio` | เปิด Prisma Studio |
 
 ---
 
@@ -234,12 +226,6 @@ AggregateError หรือ Proxy Error
 ```
 **แก้ไข:** ใช้ `npm run dev:vercel` แทน `npm run dev`
 
-### ปัญหา: Build Error
-```
-Cannot find module '@prisma/client'
-```
-**แก้ไข:** รัน `npx prisma generate` ก่อน build
-
 ---
 
 ## โครงสร้างไฟล์สำคัญ
@@ -253,9 +239,9 @@ machine-monitoring-system/
 │   ├── machine-status.ts
 │   ├── timeline-data.ts
 │   └── timeline-segments.ts
-├── prisma/
-│   ├── schema.prisma       # Database schema
-│   └── seed.ts             # Seed data script
+├── scripts/
+│   ├── db-setup.cjs         # สร้างตาราง database
+│   └── db-seed.cjs          # Seed ข้อมูลตัวอย่าง
 ├── src/
 │   ├── components/         # React components
 │   ├── lib/api.ts          # Frontend API client

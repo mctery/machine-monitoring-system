@@ -9,35 +9,27 @@
   "scripts": {
     "dev": "vite",
     "dev:vercel": "vercel dev",
-    "build": "prisma generate && tsc && vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "start": "node server.cjs",
     "start:pm2": "pm2 start ecosystem.config.cjs",
     "stop:pm2": "pm2 stop machine-monitoring",
     "restart:pm2": "pm2 restart machine-monitoring",
     "logs:pm2": "pm2 logs machine-monitoring",
-    "db:seed": "npx tsx prisma/seed.ts",
-    "db:push": "npx prisma db push",
-    "db:studio": "npx prisma studio"
-  },
-  "prisma": {
-    "seed": "npx tsx prisma/seed.ts"
+    "db:setup": "node scripts/db-setup.cjs",
+    "db:seed": "node scripts/db-seed.cjs"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
     "@tanstack/react-table": "^8.21.3",
-    "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "dotenv": "^17.2.3",
     "express": "^4.22.1",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.428.0",
     "mysql2": "^3.15.3",
-    "prisma": "^5.22.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
-    "serverless-mysql": "^2.1.0",
     "zustand": "^4.5.4"
   },
   "devDependencies": {

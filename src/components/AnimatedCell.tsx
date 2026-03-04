@@ -8,6 +8,9 @@ interface AnimatedCellProps {
   className?: string;
 }
 
+// Max cache entries (~60 machines × 8 columns = 480 cells)
+const MAX_CACHE_SIZE = 500;
+
 // Use window object to persist cache across module reloads (works in production)
 const getCache = (): Map<string, string | number> => {
   if (typeof window === 'undefined') {
@@ -17,6 +20,17 @@ const getCache = (): Map<string, string | number> => {
     (window as unknown as { __animatedCellCache: Map<string, string | number> }).__animatedCellCache = new Map();
   }
   return (window as unknown as { __animatedCellCache: Map<string, string | number> }).__animatedCellCache;
+};
+
+// Evict oldest entries when cache exceeds MAX_CACHE_SIZE
+const evictIfNeeded = (cache: Map<string, string | number>) => {
+  if (cache.size <= MAX_CACHE_SIZE) return;
+  const excess = cache.size - MAX_CACHE_SIZE;
+  const iterator = cache.keys();
+  for (let i = 0; i < excess; i++) {
+    const key = iterator.next().value;
+    if (key !== undefined) cache.delete(key);
+  }
 };
 
 const AnimatedCell = ({ value, cellKey, className = '' }: AnimatedCellProps) => {
@@ -40,11 +54,13 @@ const AnimatedCell = ({ value, cellKey, className = '' }: AnimatedCellProps) => 
       }, 500);
 
       cache.set(cacheKey, value);
+      evictIfNeeded(cache);
       return () => clearTimeout(timer);
     }
 
     // Store current value for next comparison
     cache.set(cacheKey, value);
+    evictIfNeeded(cache);
   }, [value, cacheKey]);
 
   return (

@@ -1,5 +1,5 @@
 // src/components/TimelineViewer.tsx
-import { useEffect, useState, useCallback, memo, useMemo, Fragment } from 'react';
+import { useEffect, useState, useCallback, useRef, memo, useMemo, Fragment } from 'react';
 import { motion } from 'framer-motion';
 import { useMachineStore } from '../store/useMachineStore';
 import { getTimelineColor, getRatioCellClass } from '../utils/helpers';
@@ -18,23 +18,39 @@ const toDateTimeLocal = (date: Date): string => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// Memoized timeline segment component
+// Tooltip show/hide callbacks type
+type TooltipHandlers = {
+  show: (e: React.MouseEvent, text: string) => void;
+  move: (e: React.MouseEvent) => void;
+  hide: () => void;
+};
+
+// Memoized timeline segment component (absolute positioned by wall-clock time)
 const TimelineSegmentBar = memo(({
   segment,
-  widthPercent
+  rangeStart,
+  totalMs,
+  tip
 }: {
   segment: TimelineSegment;
-  widthPercent: number;
+  rangeStart: number;
+  totalMs: number;
+  tip: TooltipHandlers;
 }) => {
   const startStr = format(segment.start, 'dd/MM/yyyy HH:mm');
   const endStr = format(segment.end, 'dd/MM/yyyy HH:mm');
-  const tooltip = `${segment.state}\nLog Time: ${startStr} - ${endStr}\nRun Hour: ${segment.runHour} | Stop Hour: ${segment.stopHour}`;
+  const tooltipText = `${segment.state}\nLog Time: ${startStr} - ${endStr}\nRun Hour: ${segment.runHour} | Stop Hour: ${segment.stopHour}`;
+
+  const leftPercent = totalMs > 0 ? ((segment.start.getTime() - rangeStart) / totalMs) * 100 : 0;
+  const widthPercent = totalMs > 0 ? ((segment.end.getTime() - segment.start.getTime()) / totalMs) * 100 : 0;
 
   return (
     <div
-      className={`${getTimelineColor(segment.state)} border-r border-gray-400 dark:border-gray-800 hover:opacity-80 transition-opacity cursor-pointer`}
-      style={{ width: `${widthPercent}%` }}
-      title={tooltip}
+      className={`absolute top-0 bottom-0 ${getTimelineColor(segment.state)} hover:opacity-80 transition-opacity cursor-pointer`}
+      style={{ left: `${leftPercent}%`, width: `${Math.max(widthPercent, 0.2)}%` }}
+      onMouseEnter={(e) => tip.show(e, tooltipText)}
+      onMouseMove={tip.move}
+      onMouseLeave={tip.hide}
       role="img"
       aria-label={`${segment.state} from ${startStr} to ${endStr}, Run: ${segment.runHour}, Stop: ${segment.stopHour}`}
     />
@@ -44,45 +60,47 @@ const TimelineSegmentBar = memo(({
 TimelineSegmentBar.displayName = 'TimelineSegmentBar';
 
 // Memoized timeline row component
-const TimelineRow = memo(({ item }: { item: TimelineData }) => {
-  const totalDuration = useMemo(
-    () => item.timeline.reduce((sum, s) => sum + s.duration, 0),
-    [item.timeline]
-  );
-
+const TimelineRow = memo(({ item, rangeStart, totalMs, tip }: { item: TimelineData; rangeStart: number; totalMs: number; tip: TooltipHandlers }) => {
   return (
-    <tr className="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750">
-      <td className="px-4 py-3 border-r border-gray-200 dark:border-gray-700 sticky left-0 bg-white dark:bg-gray-800 z-10 text-gray-900 dark:text-white">
+    <tr className="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 text-xs">
+      <td className="px-2 py-1.5 border-r border-gray-200 dark:border-gray-700 sticky left-0 bg-white dark:bg-gray-800 z-10 text-gray-900 dark:text-white">
         {item.machineName}
       </td>
-      <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.run.toFixed(1)}</td>
-      <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.warning}</td>
-      <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.stop.toFixed(1)}</td>
+      <td className="px-2 py-1.5 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.run.toFixed(2)}</td>
+      <td className="px-2 py-1.5 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.warning}</td>
+      <td className="px-2 py-1.5 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.stop.toFixed(2)}</td>
       <td
-        className={`px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.actualRatio1)}`}
+        className={`px-2 py-1.5 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.actualRatio1)}`}
       >
-        {item.actualRatio1.toFixed(2)}
+        {item.actualRatio1.toFixed(2)} %
       </td>
-      <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.actualRatio2.toFixed(2)}</td>
       <td
-        className={`px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.trueRatio1)}`}
+        className={`px-2 py-1.5 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.actualRatio2)}`}
       >
-        {item.trueRatio1.toFixed(2)}
+        {item.actualRatio2.toFixed(2)} %
       </td>
-      <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.trueRatio2.toFixed(2)}</td>
-      <td className="px-3 py-3 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.warningRatio}</td>
-      <td className="px-4 py-3">
-        <div className="flex h-10 rounded overflow-hidden border border-gray-300 dark:border-gray-600" role="img" aria-label={`Timeline for ${item.machineName}`}>
-          {item.timeline.map((segment, idx) => {
-            const widthPercent = totalDuration > 0 ? (segment.duration / totalDuration) * 100 : 0;
-            return (
-              <TimelineSegmentBar
-                key={idx}
-                segment={segment}
-                widthPercent={widthPercent}
-              />
-            );
-          })}
+      <td
+        className={`px-2 py-1.5 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.trueRatio1)}`}
+      >
+        {item.trueRatio1.toFixed(2)} %
+      </td>
+      <td
+        className={`px-2 py-1.5 text-center border-r border-gray-200 dark:border-gray-700 font-medium ${getRatioCellClass(item.trueRatio2)}`}
+      >
+        {item.trueRatio2.toFixed(2)} %
+      </td>
+      <td className="px-2 py-1.5 text-center border-r border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">{item.warningRatio}</td>
+      <td className="px-2 py-1.5">
+        <div className="relative h-7 rounded overflow-hidden border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700" role="img" aria-label={`Timeline for ${item.machineName}`}>
+          {item.timeline.map((segment, idx) => (
+            <TimelineSegmentBar
+              key={idx}
+              segment={segment}
+              rangeStart={rangeStart}
+              totalMs={totalMs}
+              tip={tip}
+            />
+          ))}
         </div>
       </td>
     </tr>
@@ -94,7 +112,7 @@ TimelineRow.displayName = 'TimelineRow';
 // Group header row component
 const GroupHeaderRow = memo(({ groupName, colSpan }: { groupName: string; colSpan: number }) => (
   <tr className="bg-gray-300 dark:bg-gray-600">
-    <td colSpan={colSpan} className="px-4 py-2 font-bold text-gray-800 dark:text-white">
+    <td colSpan={colSpan} className="px-2 py-1.5 font-bold text-xs text-gray-800 dark:text-white">
       {groupName}
     </td>
   </tr>
@@ -103,7 +121,7 @@ const GroupHeaderRow = memo(({ groupName, colSpan }: { groupName: string; colSpa
 GroupHeaderRow.displayName = 'GroupHeaderRow';
 
 const TimelineViewer = () => {
-  const { timelineData, dateRange, setDateRange, loadTimelineData, exportToCSV, isLoading, error, clearError } = useMachineStore();
+  const { timelineData, dateRange, setDateRange, loadTimelineData, exportToCSV, isLoadingTimeline: isLoading, error, clearError } = useMachineStore();
   const [fromStr, setFromStr] = useState(toDateTimeLocal(dateRange.from));
   const [toStr, setToStr] = useState(toDateTimeLocal(dateRange.to));
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -153,108 +171,73 @@ const TimelineViewer = () => {
     loadTimelineData();
   }, [clearError, loadTimelineData]);
 
-  // Preset date range handlers
-  const setPresetRange = useCallback((preset: 'today' | 'yesterday' | 'thisWeek' | 'last7Days' | 'thisMonth' | 'last30Days') => {
-    const now = new Date();
-    let from: Date;
-    let to: Date;
-
-    switch (preset) {
-      case 'today':
-        from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
-        break;
-      case 'yesterday':
-        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 0);
-        break;
-      case 'thisWeek': {
-        const dayOfWeek = now.getDay();
-        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday, 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
-        break;
-      }
-      case 'last7Days':
-        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
-        break;
-      case 'thisMonth':
-        from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
-        break;
-      case 'last30Days':
-        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29, 0, 0, 0);
-        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
-        break;
+  // Custom tooltip (instant, no delay)
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const tip: TooltipHandlers = useMemo(() => ({
+    show: (e: React.MouseEvent, text: string) => {
+      const el = tooltipRef.current;
+      if (!el) return;
+      el.innerText = text;
+      el.style.left = `${e.clientX + 12}px`;
+      el.style.top = `${e.clientY - 10}px`;
+      el.style.display = 'block';
+    },
+    move: (e: React.MouseEvent) => {
+      const el = tooltipRef.current;
+      if (!el) return;
+      el.style.left = `${e.clientX + 12}px`;
+      el.style.top = `${e.clientY - 10}px`;
+    },
+    hide: () => {
+      const el = tooltipRef.current;
+      if (el) el.style.display = 'none';
     }
+  }), []);
 
-    setFromStr(toDateTimeLocal(from));
-    setToStr(toDateTimeLocal(to));
-    setValidationError(null);
-    const success = setDateRange({ from, to });
-    if (success) {
-      loadTimelineData();
+  // Compute dateRange timestamps for timeline positioning
+  const rangeStart = dateRange.from.getTime();
+  const totalMs = dateRange.to.getTime() - rangeStart;
+
+  // Generate time axis markers based on From/To date range
+  const timeAxisMarkers = useMemo(() => {
+    const from = dateRange.from;
+    const to = dateRange.to;
+    const totalRange = to.getTime() - from.getTime();
+    if (totalRange <= 0) return [];
+
+    // Generate 5 evenly spaced markers from "from" to "to"
+    const markerCount = 5;
+    const markers: { label: string; percent: number }[] = [];
+    const rangeHours = totalRange / (1000 * 60 * 60);
+    const isMultiDay = rangeHours > 48;
+
+    for (let i = 0; i < markerCount; i++) {
+      const percent = (i / (markerCount - 1)) * 100;
+      const time = new Date(from.getTime() + (i / (markerCount - 1)) * totalRange);
+      const label = isMultiDay
+        ? format(time, 'MM/dd HH:mm')
+        : format(time, 'HH:mm');
+      markers.push({ label, percent });
     }
-  }, [setDateRange, loadTimelineData]);
+    return markers;
+  }, [dateRange]);
 
   const displayError = validationError || error;
 
   return (
-    <PageTransition className="h-full bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-6 transition-colors flex flex-col">
+    <PageTransition className="h-full bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 transition-colors flex flex-col">
       <motion.div
         initial="initial"
         animate="animate"
         variants={staggerContainer}
       >
-        <motion.h1 variants={fadeInUp} className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">
+        <motion.h1 variants={fadeInUp} className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">
           Timeline Viewer
         </motion.h1>
 
         {/* Date Controls */}
-        <motion.div variants={fadeInUp} className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-6 shadow transition-colors">
-        {/* Quick Presets */}
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="text-sm text-gray-500 dark:text-gray-400 mr-1">Quick:</span>
-          <button
-            onClick={() => setPresetRange('today')}
-            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
-          >
-            Today
-          </button>
-          <button
-            onClick={() => setPresetRange('yesterday')}
-            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
-          >
-            Yesterday
-          </button>
-          <button
-            onClick={() => setPresetRange('thisWeek')}
-            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
-          >
-            This Week
-          </button>
-          <button
-            onClick={() => setPresetRange('last7Days')}
-            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
-          >
-            Last 7 Days
-          </button>
-          <button
-            onClick={() => setPresetRange('thisMonth')}
-            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
-          >
-            This Month
-          </button>
-          <button
-            onClick={() => setPresetRange('last30Days')}
-            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors text-gray-700 dark:text-gray-200"
-          >
-            Last 30 Days
-          </button>
-        </div>
-
-        {/* Custom Date Range */}
+        <motion.div variants={fadeInUp} className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-4 shadow transition-colors">
+        {/* Date Range */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <label htmlFor="from-datetime" className="text-sm font-medium text-gray-700 dark:text-gray-200">From:</label>
@@ -357,20 +340,38 @@ const TimelineViewer = () => {
               exit="exit"
               className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow transition-colors"
             >
+              <h2 className="px-3 py-2 text-base font-bold text-gray-800 dark:text-white border-b border-gray-200 dark:border-gray-700">
+                Timeline : All Machine
+              </h2>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm" role="table" aria-label="Machine timeline data">
+                <table className="w-full text-xs" role="table" aria-label="Machine timeline data">
                   <thead>
-                    <tr className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">
-                      <th scope="col" className="px-4 py-3 text-left border-r border-gray-300 dark:border-gray-600 sticky left-0 bg-gray-200 dark:bg-gray-700 z-10 min-w-[150px]">NAME</th>
-                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">RUN</th>
-                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">WARNING</th>
-                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">STOP</th>
-                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">ACTUAL<br />RATIO 1</th>
-                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">ACTUAL<br />RATIO 2</th>
-                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">TRUE<br />RATIO 1</th>
-                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">TRUE<br />RATIO 2</th>
-                      <th scope="col" className="px-3 py-3 text-center border-r border-gray-300 dark:border-gray-600">WARNING<br />RATIO</th>
-                      <th scope="col" className="px-4 py-3 text-left min-w-[500px]">TIMELINE</th>
+                    <tr className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white text-xs">
+                      <th scope="col" className="px-2 py-2 text-left border-r border-gray-300 dark:border-gray-600 sticky left-0 bg-gray-200 dark:bg-gray-700 z-10 min-w-[120px]">NAME</th>
+                      <th scope="col" className="px-2 py-2 text-center border-r border-gray-300 dark:border-gray-600">RUN</th>
+                      <th scope="col" className="px-2 py-2 text-center border-r border-gray-300 dark:border-gray-600">WARNING</th>
+                      <th scope="col" className="px-2 py-2 text-center border-r border-gray-300 dark:border-gray-600">STOP</th>
+                      <th scope="col" className="px-2 py-2 text-center border-r border-gray-300 dark:border-gray-600">ACTUAL<br />RATIO 1</th>
+                      <th scope="col" className="px-2 py-2 text-center border-r border-gray-300 dark:border-gray-600">ACTUAL<br />RATIO 2</th>
+                      <th scope="col" className="px-2 py-2 text-center border-r border-gray-300 dark:border-gray-600">TRUE<br />RATIO 1</th>
+                      <th scope="col" className="px-2 py-2 text-center border-r border-gray-300 dark:border-gray-600">TRUE<br />RATIO 2</th>
+                      <th scope="col" className="px-2 py-2 text-center border-r border-gray-300 dark:border-gray-600">WARNING<br />RATIO</th>
+                      <th scope="col" className="px-2 py-1 text-left min-w-[500px]">
+                        <div className="text-[10px] font-bold mb-0.5">TIMELINE</div>
+                        <div className="relative w-full h-3">
+                          {timeAxisMarkers.map((marker, i) => (
+                            <span
+                              key={i}
+                              className={`absolute bottom-0 text-[9px] font-normal text-gray-500 dark:text-gray-400 ${
+                                i === 0 ? 'left-0' : i === timeAxisMarkers.length - 1 ? 'right-0' : '-translate-x-1/2'
+                              }`}
+                              style={i > 0 && i < timeAxisMarkers.length - 1 ? { left: `${marker.percent}%` } : undefined}
+                            >
+                              {marker.label}
+                            </span>
+                          ))}
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800">
@@ -378,7 +379,7 @@ const TimelineViewer = () => {
                       <Fragment key={groupName}>
                         <GroupHeaderRow groupName={groupName} colSpan={10} />
                         {items.map((item, index) => (
-                          <TimelineRow key={`${groupName}-${item.machineName || index}`} item={item} />
+                          <TimelineRow key={`${groupName}-${item.machineName || index}`} item={item} rangeStart={rangeStart} totalMs={totalMs} tip={tip} />
                         ))}
                       </Fragment>
                     ))}
@@ -390,6 +391,12 @@ const TimelineViewer = () => {
         </AnimatePresence>
       </motion.div>
       </motion.div>
+
+      {/* Instant tooltip */}
+      <div
+        ref={tooltipRef}
+        className="fixed z-50 hidden px-2.5 py-1.5 text-xs bg-gray-900 text-white rounded shadow-lg whitespace-pre pointer-events-none"
+      />
     </PageTransition>
   );
 };

@@ -21,8 +21,7 @@ const mapStatusToMachine = (data: MachineStatusData): Machine => ({
 // Build timeline segments from individual machine_hours records
 const buildTimelineSegments = (
   segments: TimelineSegmentData[],
-  machineName: string,
-  rangeEnd: Date
+  machineName: string
 ): TimelineSegment[] => {
   const machineSegments = segments
     .filter(s => s.machineName === machineName)
@@ -34,27 +33,31 @@ const buildTimelineSegments = (
     const segment = machineSegments[i];
     const logTime = new Date(segment.logTime);
 
-    // Calculate end time: use next record's logTime, or rangeEnd for the last record
+    // Store actual DB values for display
+    const runHour = segment.runHour || 0;
+    const stopHour = segment.stopHour || 0;
+
+    // Calculate end time from actual duration (runHour + stopHour in hours)
+    // If next record exists and is closer, use that instead to avoid overlap
+    const durationMs = (runHour + stopHour) * 60 * 60 * 1000;
+    const calculatedEnd = new Date(logTime.getTime() + (durationMs || 60 * 60 * 1000)); // fallback 1hr
     const nextLogTime = i < machineSegments.length - 1
       ? new Date(machineSegments[i + 1].logTime)
-      : rangeEnd;
+      : null;
+    const endTime = nextLogTime && nextLogTime.getTime() < calculatedEnd.getTime()
+      ? nextLogTime
+      : calculatedEnd;
 
     // Determine state based on run_status/stop_status
     const state: 'RUN' | 'STOP' | 'REWORK' = segment.runStatus === 1
       ? (segment.reworkStatus === 1 ? 'REWORK' : 'RUN')
       : 'STOP';
 
-    // Store actual DB values for display
-    const runHour = segment.runHour || 0;
-    const stopHour = segment.stopHour || 0;
-
-    // Use run_hour + stop_hour as weight for bar width proportion
-    // Fallback to 1 to ensure the segment is visible
     const duration = (runHour + stopHour) || 1;
 
     timeline.push({
       start: logTime,
-      end: nextLogTime,
+      end: endTime,
       state,
       duration,
       runHour,
@@ -69,8 +72,7 @@ const buildTimelineSegments = (
 const mapToTimelineData = (
   data: TimelineApiData,
   groupAverages: Map<string, { avgActualRatio1: number; avgTrueRatio1: number }>,
-  segments: TimelineSegmentData[],
-  rangeEnd: Date
+  segments: TimelineSegmentData[]
 ): TimelineData => {
   // Warning hours not available in database - set to 0
   const warningHours = 0;
@@ -79,7 +81,7 @@ const mapToTimelineData = (
   const groupAvg = groupAverages.get(data.groupName) || { avgActualRatio1: 0, avgTrueRatio1: 0 };
 
   // Build timeline from actual segments data
-  let timeline = buildTimelineSegments(segments, data.machineName, rangeEnd);
+  let timeline = buildTimelineSegments(segments, data.machineName);
 
   // Use aggregated RUN/STOP values from API
   const totalRun = data.runHour || 0;
@@ -139,7 +141,8 @@ interface MachineStore {
   availableGroups: string[];
   selectedGroup: string;
   dateRange: DateRange;
-  isLoading: boolean;
+  isLoadingMachines: boolean;
+  isLoadingTimeline: boolean;
   error: string | null;
 
   // Actions
@@ -217,7 +220,8 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
   availableGroups: [],
   selectedGroup: 'ALL',
   dateRange: getInitialDateRange(),
-  isLoading: false,
+  isLoadingMachines: false,
+  isLoadingTimeline: false,
   error: null,
 
   setSelectedGroup: (group) => set({ selectedGroup: group }),
@@ -233,25 +237,27 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
   },
 
   loadMachines: async () => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingMachines: true, error: null });
     try {
-      // Fetch joined data from API
       const { data, groups } = await machineStatusApi.getAll();
 
-      // Convert to Machine type
-      const machines = data.map(mapStatusToMachine);
-      set({ machines, availableGroups: groups, isLoading: false });
+      const machines = data.map(mapStatusToMachine).sort((a, b) => {
+        const groupCmp = a.group.localeCompare(b.group);
+        if (groupCmp !== 0) return groupCmp;
+        return a.machineName.localeCompare(b.machineName, undefined, { numeric: true });
+      });
+      set({ machines, availableGroups: groups, isLoadingMachines: false });
     } catch (error) {
       console.error('Failed to load machines:', error);
       set({
         error: error instanceof Error ? error.message : 'Failed to load machines from database',
-        isLoading: false
+        isLoadingMachines: false
       });
     }
   },
 
   loadTimelineData: async () => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingTimeline: true, error: null });
     try {
       const { dateRange } = get();
 
@@ -281,14 +287,19 @@ export const useMachineStore = create<MachineStore>((set, get) => ({
         });
       }
 
-      // Convert to TimelineData type with group averages and real segments
-      const timelineData = data.map(d => mapToTimelineData(d, groupAverages, segments, dateRange.to));
-      set({ timelineData, isLoading: false });
+      // Convert to TimelineData type with group averages and real segments, sorted naturally
+      const timelineData = data.map(d => mapToTimelineData(d, groupAverages, segments))
+        .sort((a, b) => {
+          const groupCmp = a.groupName.localeCompare(b.groupName);
+          if (groupCmp !== 0) return groupCmp;
+          return a.machineName.localeCompare(b.machineName, undefined, { numeric: true });
+        });
+      set({ timelineData, isLoadingTimeline: false });
     } catch (error) {
       console.error('Failed to load timeline data:', error);
       set({
         error: error instanceof Error ? error.message : 'Failed to load timeline data from database',
-        isLoading: false
+        isLoadingTimeline: false
       });
     }
   },

@@ -8,7 +8,6 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-blue)
 ![Vite](https://img.shields.io/badge/Vite-5.4-purple)
-![Prisma](https://img.shields.io/badge/Prisma-5.22-teal)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange)
 ![Vercel](https://img.shields.io/badge/Vercel-Deployed-black)
 
@@ -82,8 +81,7 @@
 | **Table** | TanStack React Table | 8.21 |
 | **Icons** | Lucide React | 0.428 |
 | **Date** | date-fns | 3.6 |
-| **Database** | MySQL / TiDB Cloud | 8.0 |
-| **ORM** | Prisma (migrations/seed only, runtime ใช้ mysql2 ตรง) | 5.22 |
+| **Database** | MySQL / TiDB Cloud (mysql2/promise) | 8.0 |
 | **API** | Vercel Serverless Functions / Express.js | - / 4.22 |
 | **Process Manager** | PM2 | - |
 | **Hosting** | Vercel (Cloud) / PM2 (On-premise) | - |
@@ -141,15 +139,13 @@ machine-monitoring-system/
 │   ├── App.tsx                    # Main App (React Router, lazy loading)
 │   └── main.tsx                   # Entry point
 │
-├── scripts/                       # Production Scripts (Windows)
-│   ├── start-production.bat       # เริ่ม server
-│   ├── stop-production.bat        # หยุด server
+├── scripts/                       # Scripts
+│   ├── db-setup.cjs               # สร้างตาราง (CREATE TABLE)
+│   ├── db-seed.cjs                # Seed ข้อมูลตัวอย่าง
+│   ├── start-production.bat       # เริ่ม server (Windows)
+│   ├── stop-production.bat        # หยุด server (Windows)
 │   ├── install-startup.bat        # ติดตั้ง Windows startup
 │   └── startup-service.bat        # Script สำหรับ startup
-│
-├── prisma/                        # Database
-│   ├── schema.prisma              # Database schema
-│   └── seed.ts                    # Seed data
 │
 ├── database/                      # Database utilities
 │   └── seed.sql                   # Raw SQL seed
@@ -205,9 +201,6 @@ DB_PASSWORD=your-password
 DB_NAME=your-database
 DB_SSL=false           # ใส่ true ถ้าใช้ TiDB Cloud
 
-# Prisma Database URL (for db:push, db:seed)
-DATABASE_URL=mysql://user:password@host:port/database
-
 # Frontend API URL (optional)
 VITE_API_URL=/api
 
@@ -218,14 +211,11 @@ PORT=3000
 ### Database Setup
 
 ```bash
-# Push schema ไป database
-npm run db:push
+# สร้างตาราง (CREATE TABLE IF NOT EXISTS)
+npm run db:setup
 
 # Seed ข้อมูลตัวอย่าง (60 เครื่อง)
 npm run db:seed
-
-# เปิด Prisma Studio (GUI)
-npm run db:studio
 ```
 
 ---
@@ -248,16 +238,15 @@ npm run dev
 |--------|----------|
 | `npm run dev` | รัน Vite dev server (Frontend only, port 5000) |
 | `npm run dev:vercel` | รัน Vercel dev (Frontend + API) |
-| `npm run build` | Build สำหรับ production (Prisma generate + TypeScript + Vite) |
+| `npm run build` | Build สำหรับ production (TypeScript + Vite) |
 | `npm run preview` | Preview production build |
 | `npm run start` | รัน Express production server |
 | `npm run start:pm2` | รันผ่าน PM2 (Port 8000) |
 | `npm run stop:pm2` | หยุด PM2 |
 | `npm run restart:pm2` | Restart PM2 |
 | `npm run logs:pm2` | ดู PM2 logs |
-| `npm run db:push` | Push Prisma schema |
+| `npm run db:setup` | สร้างตาราง database |
 | `npm run db:seed` | Seed ข้อมูลตัวอย่าง |
-| `npm run db:studio` | เปิด Prisma Studio |
 
 ---
 
@@ -288,7 +277,7 @@ vercel
 #### รันแบบ Manual
 
 ```bash
-# Build (Prisma generate + TypeScript + Vite)
+# Build (TypeScript + Vite)
 npm run build
 
 # รัน server (ใช้ PORT จาก .env.local หรือ default 3000)
@@ -591,15 +580,6 @@ Error: ER_UNKNOWN_ERROR
 # ลอง restart
 pm2 kill
 pm2 start ecosystem.config.cjs
-```
-
-### ปัญหา: Prisma Client ไม่ถูก generate
-```bash
-# Generate Prisma Client ใหม่
-npx prisma generate
-
-# หรือ build ใหม่ (รวม prisma generate)
-npm run build
 ```
 
 ### ปัญหา: Port 8000 ถูกใช้อยู่

@@ -1,4 +1,4 @@
-// API utility for frontend to communicate with Prisma backend
+// API utility for frontend to communicate with backend
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -97,8 +97,8 @@ async function fetchApi<T>(
 
 // Health check
 export async function checkHealth(): Promise<HealthStatus> {
-  const response = await fetchApi<HealthStatus>('/health');
-  return response as unknown as HealthStatus;
+  const response = await fetch(`${API_BASE_URL}/health`);
+  return response.json() as Promise<HealthStatus>;
 }
 
 // Machine Hours API
@@ -121,28 +121,6 @@ export const machineHoursApi = {
     return response.data || [];
   },
 
-  // Get unique machine names
-  async getMachineNames(): Promise<string[]> {
-    const data = await this.getAll({ limit: 1000 });
-    const names = [...new Set(data.map(d => d.machineName))];
-    return names.sort();
-  },
-
-  // Get latest data for each machine
-  async getLatestByMachine(): Promise<Map<string, MachineHoursData>> {
-    const data = await this.getAll({ limit: 1000 });
-    const latest = new Map<string, MachineHoursData>();
-
-    for (const entry of data) {
-      const existing = latest.get(entry.machineName);
-      if (!existing || new Date(entry.logTime) > new Date(existing.logTime)) {
-        latest.set(entry.machineName, entry);
-      }
-    }
-
-    return latest;
-  },
-
   // Create new entry
   async create(entry: Omit<MachineHoursData, 'id'>): Promise<MachineHoursData> {
     const response = await fetchApi<MachineHoursData>('/machine-hours', {
@@ -150,6 +128,29 @@ export const machineHoursApi = {
       body: JSON.stringify(entry),
     });
     return response.data!;
+  },
+
+  // Delete entry by id
+  async delete(id: number): Promise<void> {
+    await fetchApi(`/machine-hours?id=${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Get existing timestamps (lightweight, for gap detection)
+  async getExistingTimes(from: string, to: string): Promise<{ machineName: string; logTime: string }[]> {
+    const response = await fetchApi<{ machineName: string; logTime: string }[]>(
+      `/machine-hours-times?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+    );
+    return response.data || [];
+  },
+
+  // Delete all entries
+  async deleteAll(): Promise<{ count: number }> {
+    const response = await fetchApi<{ count: number }>('/machine-hours?all=true', {
+      method: 'DELETE',
+    });
+    return response as unknown as { count: number };
   },
 };
 
@@ -262,7 +263,9 @@ export const timelineApi = {
 export const seedApi = {
   // Generate random machine_hours data
   async seedHours(): Promise<{ message: string; insertedCount: number }> {
-    const response = await fetchApi<{ message: string; insertedCount: number }>('/seed-hours');
+    const response = await fetchApi<{ message: string; insertedCount: number }>('/seed-hours', {
+      method: 'POST',
+    });
     return response as { message: string; insertedCount: number };
   },
 };

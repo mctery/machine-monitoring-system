@@ -1,52 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import mysql from 'mysql2/promise';
+import { getConnection, setCORS, errorMessage } from './_db';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  setCORS(res);
 
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const required = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
-  const missing = required.filter(key => !process.env[key]);
-  if (missing.length > 0) {
-    return res.status(500).json({
-      status: 'unhealthy',
-      database: 'error',
-      error: `Missing required environment variables: ${missing.join(', ')}`,
-      timestamp: new Date().toISOString()
-    });
-  }
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   let connection;
   try {
-    connection = await mysql.createConnection({
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT!),
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined
-    });
-
+    connection = await getConnection();
     await connection.execute('SELECT 1');
-
-    return res.status(200).json({
-      status: 'healthy',
-      database: 'connected',
-      timestamp: new Date().toISOString()
-    });
+    return res.status(200).json({ status: 'healthy', database: 'connected', timestamp: new Date().toISOString() });
   } catch (error) {
-    return res.status(500).json({
-      status: 'unhealthy',
-      database: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
-    });
+    return res.status(500).json({ status: 'unhealthy', database: 'error', error: errorMessage(error), timestamp: new Date().toISOString() });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    if (connection) await connection.end();
   }
 }
